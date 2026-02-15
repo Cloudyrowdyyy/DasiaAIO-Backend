@@ -32,28 +32,18 @@
     "appId": "com.guardfiream.app",
     "productName": "Guard Firearm Management",
     "files": [
-      "dist/**/*",
-      "electron.js",
+      "app-dist/**/*",
+      "electron.cjs",
       "preload.js",
       "package.json"
     ],
     "directories": {
-      "buildResources": "assets"
+      "buildResources": "assets",
+      "output": "release"
     },
     "win": {
       "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        },
-        {
-          "target": "portable",
-          "arch": [
-            "x64"
-          ]
-        }
+        "portable"
       ]
     },
     "nsis": {
