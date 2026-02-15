@@ -1,4 +1,4 @@
-# Guard Firearm Allocation and Accountability Management System
+# DASIA AIO Management System
 
 A full-stack React + Node.js + Electron desktop application with user authentication backed by MongoDB.
 
