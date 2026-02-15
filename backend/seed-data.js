@@ -10,12 +10,15 @@ async function seedDatabase() {
     await client.connect()
     const db = client.db(DB_NAME)
 
-    // Clear existing collections
+    // Clear existing collections (but preserve test login accounts)
     await db.collection('firearms').deleteMany({})
     await db.collection('firearm-allocations').deleteMany({})
     await db.collection('guard-firearm-permits').deleteMany({})
     await db.collection('firearm-maintenance').deleteMany({})
-    await db.collection('users').deleteMany({})
+    // Only delete seed-generated users, preserve testuser and testadmin
+    await db.collection('users').deleteMany({
+      username: { $in: ['guard1', 'guard2', 'admin1'] }
+    })
 
     console.log('Cleared existing data...')
 
