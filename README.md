@@ -61,17 +61,19 @@ MONGODB_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/<database>?r
 
 ### 3. Start the App
 ```bash
-# Development (runs Vite + Electron)
+# Development mode (Recommended)
 npm run dev
-
-# Build for production
-npm run build
-
-# Run production build
-npm run electron
 ```
 
-The Electron app will automatically start with the development server.
+The Electron app will automatically launch with:
+- Vite dev server on port 5173
+- Express backend on port 5000
+- Developer tools enabled
+
+### Production Build
+For production builds on Windows, see [BUILD_TROUBLESHOOTING.md](BUILD_TROUBLESHOOTING.md)
+
+**For now, development mode works perfectly and is recommended for testing!**
 
 ## Running as Web Application
 
@@ -82,12 +84,16 @@ npm install
 npm start
 ```
 
-### 2. Start Frontend
+### 2. Start Frontend (from root directory)
 ```bash
 npm run dev
 ```
 
 Access at `http://localhost:5173/`
+
+## Troubleshooting
+
+If you encounter issues with production builds, see [BUILD_TROUBLESHOOTING.md](BUILD_TROUBLESHOOTING.md)
 
 ### 3. Configure `.env`
 Create `backend/.env`:
