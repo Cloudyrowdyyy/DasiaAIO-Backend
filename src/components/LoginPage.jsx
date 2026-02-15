@@ -93,9 +93,16 @@ export default function LoginPage({ onLogin }) {
           return
         }
 
-        // Validate security guard fields
-        if (!fullName || !phoneNumber || !licenseNumber || !licenseExpiryDate) {
-          setError('All security guard details are required')
+        // Validate required fields
+        if (!fullName || !phoneNumber) {
+          setError('Full name and phone number are required')
+          setIsLoading(false)
+          return
+        }
+
+        // For regular users, license fields are required
+        if (role !== 'admin' && (!licenseNumber || !licenseExpiryDate)) {
+          setError('License number and expiry date are required for regular users')
           setIsLoading(false)
           return
         }
@@ -337,7 +344,7 @@ export default function LoginPage({ onLogin }) {
             </div>
           )}
 
-          {isRegistering && (
+          {isRegistering && role !== 'admin' && (
             <div className="form-group">
               <label htmlFor="licenseNumber">License Number</label>
               <input
@@ -351,7 +358,7 @@ export default function LoginPage({ onLogin }) {
             </div>
           )}
 
-          {isRegistering && (
+          {isRegistering && role !== 'admin' && (
             <div className="form-group">
               <label htmlFor="licenseExpiryDate">License Expiry Date</label>
               <input
