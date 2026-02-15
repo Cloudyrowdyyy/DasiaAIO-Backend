@@ -36,8 +36,8 @@ export default function SuperadminDashboard({ user, onLogout, onViewChange }) {
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [hoveredRow, setHoveredRow] = useState(null)
-  const [editingCell, setEditingCell] = useState(null)
+  const [editingUserId, setEditingUserId] = useState(null)
+  const [editingData, setEditingData] = useState({})
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterRole, setFilterRole] = useState('all')
@@ -80,22 +80,21 @@ export default function SuperadminDashboard({ user, onLogout, onViewChange }) {
   })
 
   const handleEditClick = (u) => {
-    setEditingCell({
-      userId: u.id,
-      field: 'fullName',
-      value: u.fullName || ''
+    setEditingUserId(u.id)
+    setEditingData({
+      fullName: u.fullName || '',
+      phoneNumber: u.phoneNumber || '',
+      licenseNumber: u.licenseNumber || '',
+      licenseExpiryDate: u.licenseExpiryDate ? u.licenseExpiryDate.split('T')[0] : ''
     })
   }
 
-  const handleCellSave = async (userId, field, newValue, currentUser) => {
+  const handleSaveClick = async (userId) => {
     try {
-      // Only send the field being edited
-      const updateData = { [field]: newValue }
-
       const response = await fetch(`http://localhost:5000/api/users/${userId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updateData)
+        body: JSON.stringify(editingData)
       })
 
       if (!response.ok) {
@@ -104,30 +103,28 @@ export default function SuperadminDashboard({ user, onLogout, onViewChange }) {
           const errJson = await response.json()
           if (errJson && errJson.error) msg = errJson.error
         } catch {}
-        // Only show error if not the old 'All fields are required' message
         if (msg !== 'All fields are required') {
           setError('Error updating user: ' + msg)
         } else {
           setError('')
         }
-        setEditingCell(null)
+        setEditingUserId(null)
         return
       }
 
-      setEditingCell(null)
+      setEditingUserId(null)
+      setEditingData({})
       setError('')
       fetchUsers()
     } catch (err) {
       setError('Error updating user: ' + err.message)
-      setEditingCell(null)
+      setEditingUserId(null)
     }
   }
 
-  const handleEditSave = async () => {
-    if (editingCell) {
-      const currentUser = users.find(u => u.id === editingCell.userId)
-      await handleCellSave(editingCell.userId, editingCell.field, editingCell.value, currentUser)
-    }
+  const handleCancelClick = () => {
+    setEditingUserId(null)
+    setEditingData({})
   }
 
   const handleDeleteConfirm = async (userId) => {
@@ -280,89 +277,53 @@ export default function SuperadminDashboard({ user, onLogout, onViewChange }) {
                     <tr 
                       key={u.id} 
                       className={`user-row role-${u.role}`}
-                      onMouseEnter={() => setHoveredRow(u.id)}
-                      onMouseLeave={() => setHoveredRow(null)}
                     >
-                      <td className="editable-cell">
-                        {editingCell?.userId === u.id && editingCell?.field === 'fullName' ? (
+                      <td>
+                        {editingUserId === u.id ? (
                           <input 
                             type="text" 
-                            value={editingCell.value}
-                            autoFocus
-                            onChange={(e) => setEditingCell({...editingCell, value: e.target.value})}
+                            value={editingData.fullName}
+                            onChange={(e) => setEditingData({...editingData, fullName: e.target.value})}
                           />
                         ) : (
-                          <span 
-                            className={hoveredRow === u.id ? 'hover-text' : ''}
-                            onClick={() => {
-                              if (!editingCell) setEditingCell({userId: u.id, field: 'fullName', value: u.fullName || ''})
-                            }}
-                          >
-                            {u.fullName || '-'}
-                          </span>
+                          u.fullName || '-'
                         )}
                       </td>
-                      <td className="editable-cell">
-                        <span className={hoveredRow === u.id ? 'hover-text' : ''}>
-                          {u.email}
-                        </span>
+                      <td>
+                        {u.email}
                       </td>
-                      <td className="editable-cell">
-                        {editingCell?.userId === u.id && editingCell?.field === 'phoneNumber' ? (
+                      <td>
+                        {editingUserId === u.id ? (
                           <input 
                             type="text" 
-                            value={editingCell.value}
-                            autoFocus
-                            onChange={(e) => setEditingCell({...editingCell, value: formatPhoneNumber(e.target.value)})}
+                            value={editingData.phoneNumber}
+                            onChange={(e) => setEditingData({...editingData, phoneNumber: formatPhoneNumber(e.target.value)})}
                             placeholder="+63-###-###-####"
                           />
                         ) : (
-                          <span 
-                            className={hoveredRow === u.id ? 'hover-text' : ''}
-                            onClick={() => {
-                              if (!editingCell) setEditingCell({userId: u.id, field: 'phoneNumber', value: u.phoneNumber || ''})
-                            }}
-                          >
-                            {u.phoneNumber || '-'}
-                          </span>
+                          u.phoneNumber || '-'
                         )}
                       </td>
-                      <td className="editable-cell">
-                        {editingCell?.userId === u.id && editingCell?.field === 'licenseNumber' ? (
+                      <td>
+                        {editingUserId === u.id ? (
                           <input 
                             type="text" 
-                            value={editingCell.value}
-                            autoFocus
-                            onChange={(e) => setEditingCell({...editingCell, value: e.target.value})}
+                            value={editingData.licenseNumber}
+                            onChange={(e) => setEditingData({...editingData, licenseNumber: e.target.value})}
                           />
                         ) : (
-                          <span 
-                            className={hoveredRow === u.id ? 'hover-text' : ''}
-                            onClick={() => {
-                              if (!editingCell) setEditingCell({userId: u.id, field: 'licenseNumber', value: u.licenseNumber || ''})
-                            }}
-                          >
-                            {u.licenseNumber || '-'}
-                          </span>
+                          u.licenseNumber || '-'
                         )}
                       </td>
-                      <td className="editable-cell">
-                        {editingCell?.userId === u.id && editingCell?.field === 'licenseExpiryDate' ? (
+                      <td>
+                        {editingUserId === u.id ? (
                           <input 
                             type="date" 
-                            value={editingCell.value}
-                            autoFocus
-                            onChange={(e) => setEditingCell({...editingCell, value: e.target.value})}
+                            value={editingData.licenseExpiryDate}
+                            onChange={(e) => setEditingData({...editingData, licenseExpiryDate: e.target.value})}
                           />
                         ) : (
-                          <span 
-                            className={hoveredRow === u.id ? 'hover-text' : ''}
-                            onClick={() => {
-                              if (!editingCell) setEditingCell({userId: u.id, field: 'licenseExpiryDate', value: u.licenseExpiryDate ? u.licenseExpiryDate.split('T')[0] : ''})
-                            }}
-                          >
-                            {u.licenseExpiryDate ? new Date(u.licenseExpiryDate).toLocaleDateString() : '-'}
-                          </span>
+                          u.licenseExpiryDate ? new Date(u.licenseExpiryDate).toLocaleDateString() : '-'
                         )}
                       </td>
                       <td>
@@ -378,13 +339,16 @@ export default function SuperadminDashboard({ user, onLogout, onViewChange }) {
                       <td>{new Date(u.createdAt).toLocaleDateString()}</td>
                       <td>
                         <div className="action-buttons">
-                          {editingCell?.userId === u.id ? (
+                          {editingUserId === u.id ? (
                             <>
-                              <button className="save-btn" onClick={() => handleCellSave(u.id, editingCell.field, editingCell.value, u)}>Save</button>
-                              <button className="cancel-btn" onClick={() => setEditingCell(null)}>Cancel</button>
+                              <button className="btn-save" onClick={() => handleSaveClick(u.id)}>Save</button>
+                              <button className="btn-cancel" onClick={handleCancelClick}>Cancel</button>
                             </>
                           ) : (
-                            <button className="btn-delete" onClick={() => setShowDeleteConfirm(u.id)}>Delete</button>
+                            <>
+                              <button className="btn-edit" onClick={() => handleEditClick(u)}>Edit</button>
+                              <button className="btn-delete" onClick={() => setShowDeleteConfirm(u.id)}>Delete</button>
+                            </>
                           )}
                         </div>
                       </td>
