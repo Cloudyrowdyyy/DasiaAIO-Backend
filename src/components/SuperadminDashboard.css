@@ -337,6 +337,10 @@
   padding: 1rem;
   border-bottom: 1px solid #e0e0e0;
   color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 150px;
 }
 
 .users-table tbody tr {
@@ -420,14 +424,15 @@
 .action-buttons {
   display: flex;
   gap: 0.5rem;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  white-space: nowrap;
 }
 
 .btn-delete {
-  padding: 0.4rem 0.8rem;
+  padding: 0.3rem 0.5rem;
   border: none;
   border-radius: 4px;
-  font-size: 0.75rem;
+  font-size: 0.65rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s;
@@ -435,6 +440,7 @@
   letter-spacing: 0.5px;
   background: #d32f2f;
   color: white;
+  white-space: nowrap;
 }
 
 .btn-delete:hover {
@@ -444,10 +450,10 @@
 }
 
 .btn-edit {
-  padding: 0.4rem 0.8rem;
+  padding: 0.3rem 0.5rem;
   border: none;
   border-radius: 4px;
-  font-size: 0.75rem;
+  font-size: 0.65rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s;
@@ -456,6 +462,7 @@
   background: #667eea;
   color: white;
   margin-right: 0.4rem;
+  white-space: nowrap;
 }
 
 .btn-edit:hover {
@@ -465,10 +472,10 @@
 }
 
 .btn-save {
-  padding: 0.4rem 0.8rem;
+  padding: 0.3rem 0.5rem;
   border: none;
   border-radius: 4px;
-  font-size: 0.75rem;
+  font-size: 0.65rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s;
@@ -477,6 +484,7 @@
   background: #4caf50;
   color: white;
   margin-right: 0.4rem;
+  white-space: nowrap;
 }
 
 .btn-save:hover {
@@ -486,10 +494,10 @@
 }
 
 .btn-cancel {
-  padding: 0.4rem 0.8rem;
+  padding: 0.3rem 0.5rem;
   border: none;
   border-radius: 4px;
-  font-size: 0.75rem;
+  font-size: 0.65rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s;
@@ -497,6 +505,7 @@
   letter-spacing: 0.5px;
   background: #999;
   color: white;
+  white-space: nowrap;
 }
 
 .btn-cancel:hover {
