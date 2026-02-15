@@ -255,14 +255,19 @@ app.post('/api/login', async (req, res) => {
       return res.status(503).json({ error: 'Database not connected' })
     }
     
-    const { email, password } = req.body
+    const { identifier, password } = req.body
 
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required' })
+    if (!identifier || !password) {
+      return res.status(400).json({ error: 'Email, phone number, and password are required' })
     }
 
-    // Find user
-    const user = await usersCollection.findOne({ email })
+    // Find user by email or phone number
+    const user = await usersCollection.findOne({
+      $or: [
+        { email: identifier },
+        { phoneNumber: identifier }
+      ]
+    })
     if (!user) {
       return res.status(401).json({ error: 'Invalid credentials' })
     }
@@ -360,22 +365,22 @@ app.put('/api/users/:id', async (req, res) => {
 
     const { ObjectId } = await import('mongodb')
     const { fullName, phoneNumber, licenseNumber, licenseExpiryDate } = req.body
-    
-    if (!fullName || !phoneNumber || !licenseNumber || !licenseExpiryDate) {
-      return res.status(400).json({ error: 'All fields are required' })
+
+    // Only update provided fields
+    const updateFields = {}
+    if (fullName !== undefined) updateFields.fullName = fullName
+    if (phoneNumber !== undefined) updateFields.phoneNumber = phoneNumber
+    if (licenseNumber !== undefined) updateFields.licenseNumber = licenseNumber
+    if (licenseExpiryDate !== undefined) updateFields.licenseExpiryDate = licenseExpiryDate
+    updateFields.updatedAt = new Date()
+
+    if (Object.keys(updateFields).length === 1) { // only updatedAt present
+      return res.status(400).json({ error: 'No valid fields provided for update' })
     }
 
     const result = await usersCollection.updateOne(
       { _id: new ObjectId(req.params.id) },
-      { 
-        $set: { 
-          fullName, 
-          phoneNumber, 
-          licenseNumber, 
-          licenseExpiryDate,
-          updatedAt: new Date()
-        } 
-      }
+      { $set: updateFields }
     )
 
     if (result.matchedCount === 0) {

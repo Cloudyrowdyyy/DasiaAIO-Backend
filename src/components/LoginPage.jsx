@@ -2,11 +2,42 @@ import { useState } from 'react'
 import Logo from './Logo'
 import './LoginPage.css'
 
+// Format phone number to +63-###-###-####
+function formatPhoneNumber(value) {
+  // Remove all non-digits
+  let cleaned = value.replace(/\D/g, '')
+  
+  // If it starts with 0, replace with 63
+  if (cleaned.startsWith('0')) {
+    cleaned = '63' + cleaned.slice(1)
+  }
+  
+  // Ensure it starts with 63
+  if (!cleaned.startsWith('63')) {
+    cleaned = '63' + cleaned
+  }
+  
+  // Limit to 12 digits (63 + 10 digits)
+  cleaned = cleaned.slice(0, 12)
+  
+  // Format as +63-###-###-####
+  if (cleaned.length <= 2) {
+    return '+' + cleaned
+  } else if (cleaned.length <= 5) {
+    return '+' + cleaned.slice(0, 2) + '-' + cleaned.slice(2)
+  } else if (cleaned.length <= 8) {
+    return '+' + cleaned.slice(0, 2) + '-' + cleaned.slice(2, 5) + '-' + cleaned.slice(5)
+  } else {
+    return '+' + cleaned.slice(0, 2) + '-' + cleaned.slice(2, 5) + '-' + cleaned.slice(5, 8) + '-' + cleaned.slice(8)
+  }
+}
+
 export default function LoginPage({ onLogin }) {
-  const [email, setEmail] = useState('')
+  const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [username, setUsername] = useState('')
   const [fullName, setFullName] = useState('')
+  const [email, setEmail] = useState('')
   const [phoneNumber, setPhoneNumber] = useState('')
   const [licenseNumber, setLicenseNumber] = useState('')
   const [licenseExpiryDate, setLicenseExpiryDate] = useState('')
@@ -122,6 +153,7 @@ export default function LoginPage({ onLogin }) {
           setRequiresVerification(true)
           setVerificationEmail(email)
           setError('Check your Gmail for the confirmation code!')
+          setIdentifier('')
           setEmail('')
           setPassword('')
           setUsername('')
@@ -141,8 +173,8 @@ export default function LoginPage({ onLogin }) {
         return
       } else {
         // Login
-        if (!email || !password) {
-          setError('Email and password are required')
+        if (!identifier || !password) {
+          setError('Email, phone number, and password are required')
           setIsLoading(false)
           return
         }
@@ -151,7 +183,7 @@ export default function LoginPage({ onLogin }) {
         const response = await fetch('http://localhost:5000/api/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password })
+          body: JSON.stringify({ identifier, password })
         })
 
         if (!response.ok) {
@@ -245,6 +277,7 @@ export default function LoginPage({ onLogin }) {
                     setVerificationEmail('')
                     setError('')
                     setIsRegistering(false)
+                    setIdentifier('')
                   }}
                   disabled={isLoading}
                 >
@@ -290,10 +323,10 @@ export default function LoginPage({ onLogin }) {
               <label htmlFor="phoneNumber">Phone Number</label>
               <input
                 id="phoneNumber"
-                type="tel"
+                type="text"
                 value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
-                placeholder="Enter your phone number"
+                onChange={(e) => setPhoneNumber(formatPhoneNumber(e.target.value))}
+                placeholder="+63-###-###-####"
                 disabled={isLoading}
               />
             </div>
@@ -326,17 +359,33 @@ export default function LoginPage({ onLogin }) {
             </div>
           )}
 
-          <div className="form-group">
-            <label htmlFor="email">Email</label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter your email"
-              disabled={isLoading}
-            />
-          </div>
+          {isRegistering && (
+            <div className="form-group">
+              <label htmlFor="email">Email</label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter your email"
+                disabled={isLoading}
+              />
+            </div>
+          )}
+
+          {!isRegistering && (
+            <div className="form-group">
+              <label htmlFor="identifier">Email or Phone Number</label>
+              <input
+                id="identifier"
+                type="text"
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
+                placeholder="Enter your email or phone number"
+                disabled={isLoading}
+              />
+            </div>
+          )}
 
           <div className="form-group">
             <label htmlFor="password">Password</label>
@@ -400,6 +449,7 @@ export default function LoginPage({ onLogin }) {
               setError('')
               setPassword('')
               setAdminCode('')
+              setIdentifier('')
             }}
             disabled={isLoading}
           >

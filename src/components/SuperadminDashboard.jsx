@@ -2,6 +2,36 @@ import { useState, useEffect } from 'react'
 import Logo from './Logo'
 import './SuperadminDashboard.css'
 
+// Format phone number to +63-###-###-####
+function formatPhoneNumber(value) {
+  // Remove all non-digits
+  let cleaned = value.replace(/\D/g, '')
+  
+  // If it starts with 0, replace with 63
+  if (cleaned.startsWith('0')) {
+    cleaned = '63' + cleaned.slice(1)
+  }
+  
+  // Ensure it starts with 63
+  if (!cleaned.startsWith('63')) {
+    cleaned = '63' + cleaned
+  }
+  
+  // Limit to 12 digits (63 + 10 digits)
+  cleaned = cleaned.slice(0, 12)
+  
+  // Format as +63-###-###-####
+  if (cleaned.length <= 2) {
+    return '+' + cleaned
+  } else if (cleaned.length <= 5) {
+    return '+' + cleaned.slice(0, 2) + '-' + cleaned.slice(2)
+  } else if (cleaned.length <= 8) {
+    return '+' + cleaned.slice(0, 2) + '-' + cleaned.slice(2, 5) + '-' + cleaned.slice(5)
+  } else {
+    return '+' + cleaned.slice(0, 2) + '-' + cleaned.slice(2, 5) + '-' + cleaned.slice(5, 8) + '-' + cleaned.slice(8)
+  }
+}
+
 export default function SuperadminDashboard({ user, onLogout }) {
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
@@ -24,7 +54,15 @@ export default function SuperadminDashboard({ user, onLogout }) {
         throw new Error('Failed to fetch users')
       }
       const data = await response.json()
-      setUsers(data.users)
+      // Ensure all required fields are present for each user
+      const safeUsers = data.users.map(u => ({
+        ...u,
+        fullName: u.fullName || '',
+        phoneNumber: u.phoneNumber || '',
+        licenseNumber: u.licenseNumber || '',
+        licenseExpiryDate: u.licenseExpiryDate || ''
+      }))
+      setUsers(safeUsers)
       setError('')
     } catch (err) {
       setError('Error loading users: ' + err.message)
@@ -51,12 +89,8 @@ export default function SuperadminDashboard({ user, onLogout }) {
 
   const handleCellSave = async (userId, field, newValue, currentUser) => {
     try {
-      const updateData = {
-        fullName: field === 'fullName' ? newValue : currentUser.fullName,
-        phoneNumber: field === 'phoneNumber' ? newValue : currentUser.phoneNumber,
-        licenseNumber: field === 'licenseNumber' ? newValue : currentUser.licenseNumber,
-        licenseExpiryDate: field === 'licenseExpiryDate' ? newValue : currentUser.licenseExpiryDate
-      }
+      // Only send the field being edited
+      const updateData = { [field]: newValue }
 
       const response = await fetch(`http://localhost:5000/api/users/${userId}`, {
         method: 'PUT',
@@ -65,7 +99,19 @@ export default function SuperadminDashboard({ user, onLogout }) {
       })
 
       if (!response.ok) {
-        throw new Error('Failed to update user')
+        let msg = 'Failed to update user'
+        try {
+          const errJson = await response.json()
+          if (errJson && errJson.error) msg = errJson.error
+        } catch {}
+        // Only show error if not the old 'All fields are required' message
+        if (msg !== 'All fields are required') {
+          setError('Error updating user: ' + msg)
+        } else {
+          setError('')
+        }
+        setEditingCell(null)
+        return
       }
 
       setEditingCell(null)
@@ -240,17 +286,13 @@ export default function SuperadminDashboard({ user, onLogout }) {
                             value={editingCell.value}
                             autoFocus
                             onChange={(e) => setEditingCell({...editingCell, value: e.target.value})}
-                            onBlur={() => handleCellSave(u.id, 'fullName', editingCell.value, u)}
-                            onKeyPress={(e) => {
-                              if (e.key === 'Enter') {
-                                handleCellSave(u.id, 'fullName', editingCell.value, u)
-                              }
-                            }}
                           />
                         ) : (
                           <span 
                             className={hoveredRow === u.id ? 'hover-text' : ''}
-                            onClick={() => setEditingCell({userId: u.id, field: 'fullName', value: u.fullName || ''})}
+                            onClick={() => {
+                              if (!editingCell) setEditingCell({userId: u.id, field: 'fullName', value: u.fullName || ''})
+                            }}
                           >
                             {u.fullName || '-'}
                           </span>
@@ -264,21 +306,18 @@ export default function SuperadminDashboard({ user, onLogout }) {
                       <td className="editable-cell">
                         {editingCell?.userId === u.id && editingCell?.field === 'phoneNumber' ? (
                           <input 
-                            type="tel" 
+                            type="text" 
                             value={editingCell.value}
                             autoFocus
-                            onChange={(e) => setEditingCell({...editingCell, value: e.target.value})}
-                            onBlur={() => handleCellSave(u.id, 'phoneNumber', editingCell.value, u)}
-                            onKeyPress={(e) => {
-                              if (e.key === 'Enter') {
-                                handleCellSave(u.id, 'phoneNumber', editingCell.value, u)
-                              }
-                            }}
+                            onChange={(e) => setEditingCell({...editingCell, value: formatPhoneNumber(e.target.value)})}
+                            placeholder="+63-###-###-####"
                           />
                         ) : (
                           <span 
                             className={hoveredRow === u.id ? 'hover-text' : ''}
-                            onClick={() => setEditingCell({userId: u.id, field: 'phoneNumber', value: u.phoneNumber || ''})}
+                            onClick={() => {
+                              if (!editingCell) setEditingCell({userId: u.id, field: 'phoneNumber', value: u.phoneNumber || ''})
+                            }}
                           >
                             {u.phoneNumber || '-'}
                           </span>
@@ -291,17 +330,13 @@ export default function SuperadminDashboard({ user, onLogout }) {
                             value={editingCell.value}
                             autoFocus
                             onChange={(e) => setEditingCell({...editingCell, value: e.target.value})}
-                            onBlur={() => handleCellSave(u.id, 'licenseNumber', editingCell.value, u)}
-                            onKeyPress={(e) => {
-                              if (e.key === 'Enter') {
-                                handleCellSave(u.id, 'licenseNumber', editingCell.value, u)
-                              }
-                            }}
                           />
                         ) : (
                           <span 
                             className={hoveredRow === u.id ? 'hover-text' : ''}
-                            onClick={() => setEditingCell({userId: u.id, field: 'licenseNumber', value: u.licenseNumber || ''})}
+                            onClick={() => {
+                              if (!editingCell) setEditingCell({userId: u.id, field: 'licenseNumber', value: u.licenseNumber || ''})
+                            }}
                           >
                             {u.licenseNumber || '-'}
                           </span>
@@ -314,17 +349,13 @@ export default function SuperadminDashboard({ user, onLogout }) {
                             value={editingCell.value}
                             autoFocus
                             onChange={(e) => setEditingCell({...editingCell, value: e.target.value})}
-                            onBlur={() => handleCellSave(u.id, 'licenseExpiryDate', editingCell.value, u)}
-                            onKeyPress={(e) => {
-                              if (e.key === 'Enter') {
-                                handleCellSave(u.id, 'licenseExpiryDate', editingCell.value, u)
-                              }
-                            }}
                           />
                         ) : (
                           <span 
                             className={hoveredRow === u.id ? 'hover-text' : ''}
-                            onClick={() => setEditingCell({userId: u.id, field: 'licenseExpiryDate', value: u.licenseExpiryDate ? u.licenseExpiryDate.split('T')[0] : ''})}
+                            onClick={() => {
+                              if (!editingCell) setEditingCell({userId: u.id, field: 'licenseExpiryDate', value: u.licenseExpiryDate ? u.licenseExpiryDate.split('T')[0] : ''})
+                            }}
                           >
                             {u.licenseExpiryDate ? new Date(u.licenseExpiryDate).toLocaleDateString() : '-'}
                           </span>
@@ -343,7 +374,14 @@ export default function SuperadminDashboard({ user, onLogout }) {
                       <td>{new Date(u.createdAt).toLocaleDateString()}</td>
                       <td>
                         <div className="action-buttons">
-                          <button className="btn-delete" onClick={() => setShowDeleteConfirm(u.id)}>Delete</button>
+                          {editingCell?.userId === u.id ? (
+                            <>
+                              <button className="save-btn" onClick={() => handleCellSave(u.id, editingCell.field, editingCell.value, u)}>Save</button>
+                              <button className="cancel-btn" onClick={() => setEditingCell(null)}>Cancel</button>
+                            </>
+                          ) : (
+                            <button className="btn-delete" onClick={() => setShowDeleteConfirm(u.id)}>Delete</button>
+                          )}
                         </div>
                       </td>
                     </tr>
