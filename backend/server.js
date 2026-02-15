@@ -275,11 +275,12 @@ app.post('/api/login', async (req, res) => {
       return res.status(400).json({ error: 'Email, phone number, and password are required' })
     }
 
-    // Find user by email or phone number
+    // Find user by email, phone number, or username
     const user = await usersCollection.findOne({
       $or: [
         { email: identifier },
-        { phoneNumber: identifier }
+        { phoneNumber: identifier },
+        { username: identifier }
       ]
     })
     if (!user) {
