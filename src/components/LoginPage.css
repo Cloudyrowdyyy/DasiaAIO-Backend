@@ -137,6 +137,49 @@
   cursor: not-allowed;
 }
 
+.verification-subtitle {
+  text-align: center;
+  color: #666;
+  margin-bottom: 1.5rem;
+  font-size: 0.9rem;
+}
+
+.verification-input {
+  text-align: center;
+  font-size: 1.5rem !important;
+  letter-spacing: 8px;
+  font-weight: bold;
+  font-family: 'Courier New', monospace;
+}
+
+.resend-btn {
+  background: #667eea;
+  color: white;
+  padding: 0.7rem 1rem;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: background 0.3s;
+}
+
+.resend-btn:hover:not(:disabled) {
+  background: #764ba2;
+}
+
+.resend-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.footer {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  flex-direction: column;
+}
+
 @media (max-width: 480px) {
   .login-box {
     margin: 1rem;
