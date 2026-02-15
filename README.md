@@ -1,52 +1,93 @@
-# DASIA AIO Management System
+# Guard Firearm Allocation and Accountability Management System
 
-A full-stack React + Node.js application with user authentication backed by MongoDB.
+A full-stack React + Node.js + Electron desktop application with user authentication backed by MongoDB.
+
+## Features
+
+- **User Management**: Role-based access control (Superadmin, Admin, Guard)
+- **Firearm Inventory**: Add, edit, and manage firearm inventory
+- **Firearm Allocation**: Issue and return firearms with tracking
+- **Guard Permits**: Manage firearm permits for guards
+- **Maintenance Tracking**: Schedule and track firearm maintenance
+- **Performance Analytics**: View guard performance metrics
+- **Desktop App**: Electron-based cross-platform desktop application
 
 ## Project Structure
 
 ```
-├── src/                    # React frontend
+├── src/                           # React frontend
 │   ├── components/
-│   │   └── LoginPage.jsx
+│   │   ├── LoginPage.jsx
+│   │   ├── SuperadminDashboard.jsx
+│   │   ├── PerformanceDashboard.jsx
+│   │   ├── FirearmInventory.jsx
+│   │   ├── FirearmAllocation.jsx
+│   │   ├── GuardFirearmPermits.jsx
+│   │   └── FirearmMaintenance.jsx
 │   ├── App.jsx
 │   └── main.jsx
-├── backend/               # Node.js Express API
+├── backend/                       # Node.js Express API
 │   ├── server.js
 │   ├── package.json
 │   └── .env
+├── electron.js                    # Electron main process
+├── preload.js                     # Electron preload script
 ├── README.md
 ├── package.json
 └── vite.config.js
 ```
 
-## Frontend (Already Running)
+## Quick Start
 
-The React app runs at `http://localhost:5173/`
+### Prerequisites
+- Node.js (v18 or higher)
+- MongoDB (local or Atlas)
+- npm or yarn
 
-```bash
-npm run dev    # Start development server
-npm run build  # Build for production
-```
-
-## Backend Setup
+## Running as Desktop App (Electron)
 
 ### 1. Install Dependencies
 ```bash
-cd backend
 npm install
+cd backend && npm install && cd ..
 ```
 
-### 2. MongoDB Setup
+### 2. Set Up Backend
+Create a `.env` file in the `backend` folder:
+```
+PORT=5000
+MONGODB_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/<database>?retryWrites=true&w=majority
+```
 
-**Option A: MongoDB Atlas (Recommended - Free Cloud)**
-1. Go to [mongodb.com/cloud/atlas](https://www.mongodb.com/cloud/atlas)
-2. Create free account and cluster
-3. Copy your connection string
+### 3. Start the App
+```bash
+# Development (runs Vite + Electron)
+npm run dev
 
-**Option B: Local MongoDB**
-1. Install from [mongodb.com](https://www.mongodb.com/try/download/community)
-2. Start MongoDB service
-3. Connection string: `mongodb://localhost:27017`
+# Build for production
+npm run build
+
+# Run production build
+npm run electron
+```
+
+The Electron app will automatically start with the development server.
+
+## Running as Web Application
+
+### 1. Start Backend
+```bash
+cd backend
+npm install
+npm start
+```
+
+### 2. Start Frontend
+```bash
+npm run dev
+```
+
+Access at `http://localhost:5173/`
 
 ### 3. Configure `.env`
 Create `backend/.env`:
