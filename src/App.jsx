@@ -1,30 +1,31 @@
 import { useState } from 'react'
 import LoginPage from './components/LoginPage'
+import AdminDashboard from './components/AdminDashboard'
+import UserDashboard from './components/UserDashboard'
 import './App.css'
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
-  const [username, setUsername] = useState('')
+  const [user, setUser] = useState(null)
 
-  const handleLogin = (user) => {
-    setUsername(user)
+  const handleLogin = (userData) => {
+    setUser(userData)
     setIsLoggedIn(true)
   }
 
   const handleLogout = () => {
-    setUsername('')
+    setUser(null)
     setIsLoggedIn(false)
   }
 
   return (
     <div className="app">
-      {isLoggedIn ? (
-        <div className="dashboard">
-          <h1>Welcome, {username}!</h1>
-          <button onClick={handleLogout}>Logout</button>
-        </div>
-      ) : (
+      {!isLoggedIn ? (
         <LoginPage onLogin={handleLogin} />
+      ) : user?.role === 'admin' ? (
+        <AdminDashboard user={user} onLogout={handleLogout} />
+      ) : (
+        <UserDashboard user={user} onLogout={handleLogout} />
       )}
     </div>
   )

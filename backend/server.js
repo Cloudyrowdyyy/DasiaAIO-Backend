@@ -42,10 +42,15 @@ app.post('/api/register', async (req, res) => {
       return res.status(503).json({ error: 'Database not connected' })
     }
     
-    const { email, password, username } = req.body
+    const { email, password, username, role } = req.body
 
-    if (!email || !password || !username) {
+    if (!email || !password || !username || !role) {
       return res.status(400).json({ error: 'All fields are required' })
+    }
+
+    // Validate role
+    if (!['user', 'admin'].includes(role)) {
+      return res.status(400).json({ error: 'Role must be "user" or "admin"' })
     }
 
     // Check if user exists
@@ -57,17 +62,19 @@ app.post('/api/register', async (req, res) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10)
 
-    // Create user
+    // Create user with role
     const result = await usersCollection.insertOne({
       email,
       username,
       password: hashedPassword,
+      role,
       createdAt: new Date()
     })
 
     res.status(201).json({
       message: 'User registered successfully',
-      userId: result.insertedId
+      userId: result.insertedId,
+      role: role
     })
   } catch (error) {
     res.status(500).json({ error: error.message })
@@ -77,6 +84,10 @@ app.post('/api/register', async (req, res) => {
 // Login user
 app.post('/api/login', async (req, res) => {
   try {
+    if (!usersCollection) {
+      return res.status(503).json({ error: 'Database not connected' })
+    }
+    
     const { email, password } = req.body
 
     if (!email || !password) {
@@ -100,7 +111,8 @@ app.post('/api/login', async (req, res) => {
       user: {
         id: user._id,
         email: user.email,
-        username: user.username
+        username: user.username,
+        role: user.role
       }
     })
   } catch (error) {
@@ -122,7 +134,34 @@ app.get('/api/user/:id', async (req, res) => {
       id: user._id,
       email: user.email,
       username: user.username,
+      role: user.role,
       createdAt: user.createdAt
+    })
+  } catch (error) {
+    res.status(500).json({ error: error.message })
+  }
+})
+
+// Get all users (Admin only)
+app.get('/api/users', async (req, res) => {
+  try {
+    if (!usersCollection) {
+      return res.status(503).json({ error: 'Database not connected' })
+    }
+
+    const users = await usersCollection
+      .find({}, { projection: { password: 0 } })
+      .toArray()
+
+    res.json({
+      total: users.length,
+      users: users.map(user => ({
+        id: user._id,
+        email: user.email,
+        username: user.username,
+        role: user.role,
+        createdAt: user.createdAt
+      }))
     })
   } catch (error) {
     res.status(500).json({ error: error.message })
