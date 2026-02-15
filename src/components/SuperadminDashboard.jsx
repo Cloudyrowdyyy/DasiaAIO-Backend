@@ -354,7 +354,7 @@ export default function SuperadminDashboard({ user, onLogout, onViewChange }) {
                       key={u.id} 
                       className={`user-row role-${u.role}`}
                     >
-                      <td>
+                      <td title={u.fullName || '-'}>
                         {editingUserId === u.id ? (
                           <input 
                             type="text" 
@@ -365,10 +365,10 @@ export default function SuperadminDashboard({ user, onLogout, onViewChange }) {
                           u.fullName || '-'
                         )}
                       </td>
-                      <td>
+                      <td title={u.email}>
                         {u.email}
                       </td>
-                      <td>
+                      <td title={u.phoneNumber || '-'}>
                         {editingUserId === u.id ? (
                           <input 
                             type="text" 
@@ -380,7 +380,7 @@ export default function SuperadminDashboard({ user, onLogout, onViewChange }) {
                           u.phoneNumber || '-'
                         )}
                       </td>
-                      <td>
+                      <td title={u.licenseNumber || '-'}>
                         {editingUserId === u.id ? (
                           <input 
                             type="text" 
