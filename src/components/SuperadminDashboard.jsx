@@ -207,7 +207,7 @@ export default function SuperadminDashboard({ user, onLogout, onViewChange }) {
         <div className="header-left">
           <Logo />
           <div className="header-titles">
-            <h1>Superadmin Dashboard</h1>
+            <h1>Admin Dashboard</h1>
             <p className="subtitle">Full System Management</p>
           </div>
         </div>
@@ -244,7 +244,7 @@ export default function SuperadminDashboard({ user, onLogout, onViewChange }) {
               ❓
             </button>
             <span className="user-name">{user.username}</span>
-            <span className="superadmin-badge">SUPERADMIN</span>
+            <span className="superadmin-badge">ADMIN</span>
           </div>
           <button onClick={onLogout} className="logout-btn">Logout</button>
         </div>
@@ -319,7 +319,7 @@ export default function SuperadminDashboard({ user, onLogout, onViewChange }) {
                 className="filter-select"
               >
                 <option value="all">All Roles</option>
-                <option value="superadmin">Superadmin</option>
+                <option value="admin">Admin</option>
                 <option value="admin">Admin</option>
                 <option value="user">Security Guard</option>
               </select>

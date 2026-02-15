@@ -34,7 +34,7 @@ function App() {
     <div className="app" style={{ minHeight: '100vh', width: '100%' }}>
       {!isLoggedIn ? (
         <LoginPage onLogin={handleLogin} />
-      ) : user?.role === 'superadmin' ? (
+      ) : user?.role === 'admin' ? (
         activeView === 'performance' ? (
           <PerformanceDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} />
         ) : activeView === 'firearms' ? (

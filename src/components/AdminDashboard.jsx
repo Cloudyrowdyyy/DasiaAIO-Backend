@@ -9,7 +9,7 @@ export default function AdminDashboard({ user, onLogout }) {
   const [editingUser, setEditingUser] = useState(null)
   const [editFormData, setEditFormData] = useState({})
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null)
-  const isSuperadmin = user?.role === 'superadmin'
+  const isAdmin = user?.role === 'admin'
 
   useEffect(() => {
     fetchUsers()

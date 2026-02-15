@@ -392,7 +392,7 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'Server is running' })
 })
 
-// Edit user (Superadmin only)
+// Edit user (Admin only)
 app.put('/api/users/:id', async (req, res) => {
   try {
     if (!usersCollection) {
@@ -429,7 +429,7 @@ app.put('/api/users/:id', async (req, res) => {
   }
 })
 
-// Delete user (Superadmin only)
+// Delete user (Admin only)
 app.delete('/api/users/:id', async (req, res) => {
   try {
     if (!usersCollection) {
