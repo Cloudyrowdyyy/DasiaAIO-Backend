@@ -32,7 +32,7 @@ function formatPhoneNumber(value) {
   }
 }
 
-export default function SuperadminDashboard({ user, onLogout }) {
+export default function SuperadminDashboard({ user, onLogout, onViewChange }) {
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -167,6 +167,10 @@ export default function SuperadminDashboard({ user, onLogout }) {
           </div>
         </div>
         <div className="header-info">
+          <div className="nav-tabs">
+            <button className="nav-tab active" onClick={() => onViewChange('users')}>Users Management</button>
+            <button className="nav-tab" onClick={() => onViewChange('performance')}>Performance Analytics</button>
+          </div>
           <div className="user-info">
             <span className="user-name">{user.username}</span>
             <span className="superadmin-badge">SUPERADMIN</span>

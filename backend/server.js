@@ -14,6 +14,8 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017'
 let db
 let usersCollection
 let verificationCollection
+let attendanceCollection
+let feedbackCollection
 
 // Email configuration
 const transporter = nodemailer.createTransport({
@@ -67,6 +69,8 @@ async function connectDB() {
     db = client.db('login_app')
     usersCollection = db.collection('users')
     verificationCollection = db.collection('verifications')
+    attendanceCollection = db.collection('attendance')
+    feedbackCollection = db.collection('feedback')
   } catch (error) {
     console.warn('⚠ MongoDB connection failed:', error.message)
     console.warn('⚠ Running in offline mode - database features disabled')
@@ -408,6 +412,301 @@ app.delete('/api/users/:id', async (req, res) => {
     }
 
     res.json({ message: 'User deleted successfully' })
+  } catch (error) {
+    res.status(500).json({ error: error.message })
+  }
+})
+
+// ============ PERFORMANCE MANAGEMENT ENDPOINTS ============
+
+// Guard check-in
+app.post('/api/attendance/checkin', async (req, res) => {
+  try {
+    if (!attendanceCollection || !usersCollection) {
+      return res.status(503).json({ error: 'Database not connected' })
+    }
+
+    const { guardId } = req.body
+
+    if (!guardId) {
+      return res.status(400).json({ error: 'Guard ID is required' })
+    }
+
+    // Check if guard exists
+    const { ObjectId } = await import('mongodb')
+    const guard = await usersCollection.findOne({ _id: new ObjectId(guardId) })
+    if (!guard) {
+      return res.status(404).json({ error: 'Guard not found' })
+    }
+
+    // Check if already checked in today
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+
+    const existingCheckin = await attendanceCollection.findOne({
+      guardId: new ObjectId(guardId),
+      date: { $gte: today, $lt: tomorrow },
+      checkIn: { $exists: true }
+    })
+
+    if (existingCheckin && !existingCheckin.checkOut) {
+      return res.status(400).json({ error: 'Already checked in today. Please check out first.' })
+    }
+
+    // Record check-in
+    const record = {
+      guardId: new ObjectId(guardId),
+      date: new Date(),
+      checkIn: new Date(),
+      checkOut: null,
+      createdAt: new Date()
+    }
+
+    const result = await attendanceCollection.insertOne(record)
+
+    res.json({ 
+      message: 'Check-in successful',
+      attendanceId: result.insertedId,
+      checkInTime: record.checkIn
+    })
+  } catch (error) {
+    res.status(500).json({ error: error.message })
+  }
+})
+
+// Guard check-out
+app.post('/api/attendance/checkout', async (req, res) => {
+  try {
+    if (!attendanceCollection) {
+      return res.status(503).json({ error: 'Database not connected' })
+    }
+
+    const { attendanceId } = req.body
+
+    if (!attendanceId) {
+      return res.status(400).json({ error: 'Attendance ID is required' })
+    }
+
+    const { ObjectId } = await import('mongodb')
+    const result = await attendanceCollection.updateOne(
+      { _id: new ObjectId(attendanceId) },
+      { $set: { checkOut: new Date() } }
+    )
+
+    if (result.matchedCount === 0) {
+      return res.status(404).json({ error: 'Attendance record not found' })
+    }
+
+    res.json({ 
+      message: 'Check-out successful',
+      checkOutTime: new Date()
+    })
+  } catch (error) {
+    res.status(500).json({ error: error.message })
+  }
+})
+
+// Submit guard feedback
+app.post('/api/feedback', async (req, res) => {
+  try {
+    if (!feedbackCollection || !usersCollection) {
+      return res.status(503).json({ error: 'Database not connected' })
+    }
+
+    const { guardId, rating, comment, submittedBy } = req.body
+
+    if (!guardId || !rating || !submittedBy) {
+      return res.status(400).json({ error: 'Guard ID, rating, and submitted by are required' })
+    }
+
+    if (rating < 1 || rating > 5) {
+      return res.status(400).json({ error: 'Rating must be between 1 and 5' })
+    }
+
+    const { ObjectId } = await import('mongodb')
+    
+    // Verify guard exists
+    const guard = await usersCollection.findOne({ _id: new ObjectId(guardId) })
+    if (!guard) {
+      return res.status(404).json({ error: 'Guard not found' })
+    }
+
+    const feedback = {
+      guardId: new ObjectId(guardId),
+      rating,
+      comment: comment || '',
+      submittedBy,
+      submittedAt: new Date(),
+      createdAt: new Date()
+    }
+
+    const result = await feedbackCollection.insertOne(feedback)
+
+    res.json({ 
+      message: 'Feedback submitted successfully',
+      feedbackId: result.insertedId
+    })
+  } catch (error) {
+    res.status(500).json({ error: error.message })
+  }
+})
+
+// Get merit scores (all guards ranked)
+app.get('/api/performance/merit-scores', async (req, res) => {
+  try {
+    if (!usersCollection || !attendanceCollection || !feedbackCollection) {
+      return res.status(503).json({ error: 'Database not connected' })
+    }
+
+    const { ObjectId } = await import('mongodb')
+    
+    // Get all security guards (role: 'user')
+    const guards = await usersCollection.find({ role: 'user' }).toArray()
+
+    const meritScores = await Promise.all(guards.map(async (guard) => {
+      // Attendance score (40%)
+      const thirtyDaysAgo = new Date()
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+      
+      const attendanceRecords = await attendanceCollection.find({
+        guardId: guard._id,
+        date: { $gte: thirtyDaysAgo }
+      }).toArray()
+
+      const daysPresent = attendanceRecords.filter(r => r.checkIn && r.checkOut).length
+      const totalWorkingDays = 30
+      const attendanceScore = (daysPresent / totalWorkingDays) * 100
+
+      // Punctuality score (30%) - on time if checked in before 9 AM
+      const onTimeCount = attendanceRecords.filter(r => {
+        const checkInHour = new Date(r.checkIn).getHours()
+        return checkInHour <= 9
+      }).length
+      const punctualityScore = (onTimeCount / Math.max(daysPresent, 1)) * 100
+
+      // Feedback score (30%) - average rating
+      const feedbackRecords = await feedbackCollection.find({
+        guardId: guard._id
+      }).toArray()
+
+      const feedbackScore = feedbackRecords.length > 0
+        ? (feedbackRecords.reduce((sum, f) => sum + f.rating, 0) / feedbackRecords.length) * 20
+        : 0
+
+      // Merit score calculation
+      const meritScore = (attendanceScore * 0.4) + (punctualityScore * 0.3) + (feedbackScore * 0.3)
+
+      return {
+        id: guard._id,
+        name: guard.fullName,
+        email: guard.email,
+        phone: guard.phoneNumber,
+        attendanceScore: Math.round(attendanceScore),
+        punctualityScore: Math.round(punctualityScore),
+        feedbackScore: Math.round(feedbackScore),
+        meritScore: Math.round(meritScore * 100) / 100,
+        daysPresent,
+        feedbackCount: feedbackRecords.length
+      }
+    }))
+
+    // Sort by merit score descending
+    meritScores.sort((a, b) => b.meritScore - a.meritScore)
+
+    res.json({
+      total: meritScores.length,
+      scores: meritScores
+    })
+  } catch (error) {
+    res.status(500).json({ error: error.message })
+  }
+})
+
+// Get individual guard performance details
+app.get('/api/performance/guards/:id', async (req, res) => {
+  try {
+    if (!usersCollection || !attendanceCollection || !feedbackCollection) {
+      return res.status(503).json({ error: 'Database not connected' })
+    }
+
+    const { ObjectId } = await import('mongodb')
+    const guardId = new ObjectId(req.params.id)
+
+    // Get guard
+    const guard = await usersCollection.findOne({ _id: guardId })
+    if (!guard) {
+      return res.status(404).json({ error: 'Guard not found' })
+    }
+
+    // Get attendance records (last 30 days)
+    const thirtyDaysAgo = new Date()
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+    
+    const attendanceRecords = await attendanceCollection.find({
+      guardId,
+      date: { $gte: thirtyDaysAgo }
+    }).sort({ date: -1 }).toArray()
+
+    // Get feedback records
+    const feedbackRecords = await feedbackCollection.find({
+      guardId
+    }).sort({ submittedAt: -1 }).toArray()
+
+    // Calculate metrics
+    const daysPresent = attendanceRecords.filter(r => r.checkIn && r.checkOut).length
+    const onTimeCount = attendanceRecords.filter(r => {
+      const checkInHour = new Date(r.checkIn).getHours()
+      return checkInHour <= 9
+    }).length
+
+    const attendanceScore = (daysPresent / 30) * 100
+    const punctualityScore = (onTimeCount / Math.max(daysPresent, 1)) * 100
+    const feedbackScore = feedbackRecords.length > 0
+      ? (feedbackRecords.reduce((sum, f) => sum + f.rating, 0) / feedbackRecords.length) * 20
+      : 0
+
+    const meritScore = (attendanceScore * 0.4) + (punctualityScore * 0.3) + (feedbackScore * 0.3)
+
+    res.json({
+      guard: {
+        id: guard._id,
+        name: guard.fullName,
+        email: guard.email,
+        phone: guard.phoneNumber,
+        verified: guard.verified
+      },
+      metrics: {
+        attendanceScore: Math.round(attendanceScore),
+        punctualityScore: Math.round(punctualityScore),
+        feedbackScore: Math.round(feedbackScore),
+        meritScore: Math.round(meritScore * 100) / 100
+      },
+      attendance: {
+        daysPresent,
+        daysAbsent: 30 - daysPresent,
+        onTimeCount,
+        lateCount: daysPresent - onTimeCount,
+        records: attendanceRecords.map(r => ({
+          date: r.date,
+          checkIn: r.checkIn,
+          checkOut: r.checkOut
+        }))
+      },
+      feedback: {
+        total: feedbackRecords.length,
+        averageRating: feedbackRecords.length > 0
+          ? (feedbackRecords.reduce((sum, f) => sum + f.rating, 0) / feedbackRecords.length).toFixed(2)
+          : 0,
+        records: feedbackRecords.map(f => ({
+          rating: f.rating,
+          comment: f.comment,
+          submittedBy: f.submittedBy,
+          submittedAt: f.submittedAt
+        }))
+      }
+    })
   } catch (error) {
     res.status(500).json({ error: error.message })
   }
