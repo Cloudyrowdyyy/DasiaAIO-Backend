@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import Logo from './Logo'
 import './LoginPage.css'
 
 export default function LoginPage({ onLogin }) {
@@ -90,7 +91,8 @@ export default function LoginPage({ onLogin }) {
 
   return (
     <div className="login-container">
-      <div className="login-box">
+      <diLogo />
+        <v className="login-box">
         <h1>{isRegistering ? 'Register' : 'Login'}</h1>
         <form onSubmit={handleSubmit}>
           {isRegistering && (

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import Logo from './Logo'
 import './UserDashboard.css'
 
 export default function UserDashboard({ user, onLogout }) {
@@ -7,7 +8,10 @@ export default function UserDashboard({ user, onLogout }) {
   return (
     <div className="user-container">
       <div className="user-header">
-        <h1>Welcome, {user.username}!</h1>
+        <div className="header-left">
+          <Logo />
+          <h1>Welcome, {user.username}!</h1>
+        </div>
         <button onClick={onLogout} className="logout-btn">Logout</button>
       </div>
 

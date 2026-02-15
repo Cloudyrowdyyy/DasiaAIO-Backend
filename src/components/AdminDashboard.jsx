@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import Logo from './Logo'
 import './AdminDashboard.css'
 
 export default function AdminDashboard({ user, onLogout }) {
@@ -30,7 +31,10 @@ export default function AdminDashboard({ user, onLogout }) {
   return (
     <div className="admin-container">
       <div className="admin-header">
-        <h1>Admin Dashboard</h1>
+        <div className="header-left">
+          <Logo />
+          <h1>Admin Dashboard</h1>
+        </div>
         <div className="header-info">
           <span>Welcome, {user.username}!</span>
           <button onClick={onLogout} className="logout-btn">Logout</button>
