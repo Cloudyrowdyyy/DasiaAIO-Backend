@@ -91,8 +91,8 @@ export default function LoginPage({ onLogin }) {
 
   return (
     <div className="login-container">
-      <diLogo />
-        <v className="login-box">
+      <div className="login-box">
+        <Logo />
         <h1>{isRegistering ? 'Register' : 'Login'}</h1>
         <form onSubmit={handleSubmit}>
           {isRegistering && (
