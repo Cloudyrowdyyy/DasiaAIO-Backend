@@ -1,4 +1,4 @@
-import { useState, useEffect, FC, ChangeEvent, MouseEvent } from 'react'
+import { useState, useEffect, FC } from 'react'
 import Logo from './Logo'
 import './AdminDashboard.css'
 
@@ -16,14 +16,10 @@ interface AdminDashboardProps {
   onViewChange?: (view: string) => void
 }
 
-const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange }) => {
+const AdminDashboard: FC<AdminDashboardProps> = ({ onLogout, onViewChange }) => {
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string>('')
-  const [editingUser, setEditingUser] = useState<User | null>(null)
-  const [editFormData, setEditFormData] = useState<Partial<User>>({})
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
-  const isAdmin = user?.role === 'admin'
 
   useEffect(() => {
     fetchUsers()
@@ -88,7 +84,6 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ user, onLogout, onViewChange 
                     <td>{u.role}</td>
                     <td>
                       <button onClick={() => handleViewChange('edit')}>Edit</button>
-                      <button onClick={() => setShowDeleteConfirm(u.id)}>Delete</button>
                     </td>
                   </tr>
                 ))}

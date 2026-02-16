@@ -1,14 +1,7 @@
 import { useState, FC, FormEvent, ChangeEvent } from 'react'
 import Logo from './Logo'
+import { User } from '../App'
 import './LoginPage.css'
-
-interface User {
-  id: string
-  email: string
-  username: string
-  role: string
-  [key: string]: any
-}
 
 interface LoginPageProps {
   onLogin: (user: User) => void
@@ -240,7 +233,11 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
 
         const data = await response.json()
         setIsLoading(false)
-        onLogin(data.user)
+        const user: User = {
+          ...data.user,
+          role: data.user.role as 'admin' | 'superadmin' | 'user' | 'guard'
+        }
+        onLogin(user)
       }
     } catch (err) {
       setError('Error: ' + (err instanceof Error ? err.message : String(err)))
@@ -250,8 +247,8 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
 
   return (
     <div className="login-container">
-      <div className="page-header">
-        <Logo />
+      <div className="page-header" style={{ display: isRegistering ? 'none' : 'flex' }}>
+        <Logo onClick={() => {}} />
         <span className="agency-name">Davao Security & Investigation Agency Inc.</span>
       </div>
       <div className="login-wrapper">

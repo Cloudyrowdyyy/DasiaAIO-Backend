@@ -16,7 +16,7 @@ interface SuperadminDashboardProps {
   onViewChange?: (view: string) => void
 }
 
-const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ user, onLogout, onViewChange }) => {
+const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ onLogout }) => {
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState<boolean>(true)
 

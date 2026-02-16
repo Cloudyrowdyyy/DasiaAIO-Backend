@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import LoginPage from './components/LoginPage'
-import AdminDashboard from './components/AdminDashboard'
 import SuperadminDashboard from './components/SuperadminDashboard'
 import UserDashboard from './components/UserDashboard'
 import PerformanceDashboard from './components/PerformanceDashboard'
@@ -10,7 +9,7 @@ import GuardFirearmPermits from './components/GuardFirearmPermits'
 import FirearmMaintenance from './components/FirearmMaintenance'
 import './App.css'
 
-interface User {
+export interface User {
   id: string
   email: string
   username: string
@@ -24,8 +23,17 @@ function App() {
   const [activeView, setActiveView] = useState<string>('users')
 
   const handleLogin = (userData: User) => {
-    console.log('Login successful:', userData)
-    setUser(userData)
+    const validRoles: Array<'admin' | 'superadmin' | 'user' | 'guard'> = ['admin', 'superadmin', 'user', 'guard']
+    if (!validRoles.includes(userData.role as 'admin' | 'superadmin' | 'user' | 'guard')) {
+      console.error('Invalid role:', userData.role)
+      return
+    }
+    const typedUser: User = {
+      ...userData,
+      role: userData.role as 'admin' | 'superadmin' | 'user' | 'guard'
+    }
+    console.log('Login successful:', typedUser)
+    setUser(typedUser)
     setIsLoggedIn(true)
     setActiveView('users')
   }
@@ -56,7 +64,7 @@ function App() {
         ) : (
           <SuperadminDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} />
         )
-      ) : user?.role === 'admin' ? (
+      ) : user?.role === 'superadmin' ? (
         activeView === 'performance' ? (
           <PerformanceDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} />
         ) : activeView === 'firearms' ? (
@@ -68,11 +76,11 @@ function App() {
         ) : activeView === 'maintenance' ? (
           <FirearmMaintenance user={user} onLogout={handleLogout} onViewChange={setActiveView} />
         ) : (
-          <AdminDashboard user={user} onLogout={handleLogout} />
+          <SuperadminDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} />
         )
-      ) : (
+      ) : user ? (
         <UserDashboard user={user} onLogout={handleLogout} />
-      )}
+      ) : null}
     </div>
   )
 }
