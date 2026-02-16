@@ -1,28 +1,21 @@
 import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
-import { MongoClient } from 'mongodb'
+import sequelize from './database/config.js'
 import bcrypt from 'bcryptjs'
 import nodemailer from 'nodemailer'
 import replacementSystem from './guard-replacement-system.js'
 import guardReplacementRoutes from './routes/guard-replacement.routes.js'
+import {
+  User, Verification, Attendance, Feedback, Firearm,
+  FirearmAllocation, GuardFirearmPermit, FirearmMaintenance,
+  AllocationAlert
+} from './models/index.js'
 
 dotenv.config()
 
 const app = express()
 const PORT = process.env.PORT || 5000
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017'
-
-let db
-let usersCollection
-let verificationCollection
-let attendanceCollection
-let feedbackCollection
-let firearmsCollection
-let firearmAllocationsCollection
-let guardFirearmPermitsCollection
-let firearmMaintenanceCollection
-let allocationAlertsCollection
 
 // Email configuration
 const transporter = nodemailer.createTransport({
@@ -32,6 +25,10 @@ const transporter = nodemailer.createTransport({
     pass: process.env.GMAIL_PASSWORD
   }
 })
+
+// Middleware
+app.use(express.json())
+app.use(cors())
 
 // Generate random confirmation code
 function generateConfirmationCode() {
@@ -60,47 +57,28 @@ async function sendConfirmationEmail(email, confirmationCode) {
   }
 }
 
-// Middleware
-app.use(express.json())
-app.use(cors())
-
-// Connect to MongoDB
-async function connectDB() {
+// Initialize database
+async function initializeDB() {
   try {
-    const client = new MongoClient(MONGODB_URI, { 
-      serverSelectionTimeoutMS: 5000,
-      connectTimeoutMS: 5000 
-    })
-    await client.connect()
-    console.log('✓ Connected to MongoDB')
-    db = client.db('login_app')
-    usersCollection = db.collection('users')
-    verificationCollection = db.collection('verifications')
-    attendanceCollection = db.collection('attendance')
-    feedbackCollection = db.collection('feedback')
-    firearmsCollection = db.collection('firearms')
-    firearmAllocationsCollection = db.collection('firearm_allocations')
-    guardFirearmPermitsCollection = db.collection('guard_firearm_permits')
-    firearmMaintenanceCollection = db.collection('firearm_maintenance')
-    allocationAlertsCollection = db.collection('allocation_alerts')
+    await sequelize.authenticate()
+    console.log('✓ Connected to PostgreSQL')
     
-    // Initialize Guard Replacement System
+    await sequelize.sync({ alter: true })
+    console.log('✓ Database synchronized')
+    
     await replacementSystem.initializeReplacementSystem()
     console.log('✓ Guard Replacement System initialized')
   } catch (error) {
-    console.warn('⚠ MongoDB connection failed:', error.message)
-    console.warn('⚠ Running in offline mode - database features disabled')
-    console.warn('⚠ Please check your MongoDB connection string and network access')
+    console.warn('⚠ Database connection failed:', error.message)
+    console.warn('⚠ Please check your PostgreSQL connection')
   }
 }
+
+// ============ AUTH ENDPOINTS ============
 
 // Register user
 app.post('/api/register', async (req, res) => {
   try {
-    if (!usersCollection) {
-      return res.status(503).json({ error: 'Database not connected' })
-    }
-    
     const { email, password, username, role, adminCode, fullName, phoneNumber, licenseNumber, licenseExpiryDate } = req.body
 
     console.log('Register request received:', { email, username, role, fullName, phoneNumber, hasLicense: !!licenseNumber })
@@ -138,7 +116,7 @@ app.post('/api/register', async (req, res) => {
     }
 
     // Check if user exists
-    const existingUser = await usersCollection.findOne({ email })
+    const existingUser = await User.findOne({ where: { email } })
     if (existingUser) {
       return res.status(400).json({ error: 'User already exists' })
     }
@@ -150,7 +128,7 @@ app.post('/api/register', async (req, res) => {
     const confirmationCode = generateConfirmationCode()
     
     // Create user with verified=false
-    const result = await usersCollection.insertOne({
+    const user = await User.create({
       email,
       username,
       password: hashedPassword,
@@ -159,18 +137,16 @@ app.post('/api/register', async (req, res) => {
       phoneNumber,
       licenseNumber,
       licenseExpiryDate,
-      verified: false,
-      createdAt: new Date()
+      verified: false
     })
 
     // Store verification code with expiration (10 minutes)
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000)
-    await verificationCollection.insertOne({
-      userId: result.insertedId,
+    await Verification.create({
+      userId: user.id,
       email,
       code: confirmationCode,
-      expiresAt,
-      createdAt: new Date()
+      expiresAt
     })
 
     // Send confirmation email
@@ -182,7 +158,7 @@ app.post('/api/register', async (req, res) => {
 
     res.status(201).json({
       message: 'Registration successful! Check your Gmail for confirmation code.',
-      userId: result.insertedId,
+      userId: user.id,
       email,
       requiresVerification: true
     })
@@ -194,10 +170,6 @@ app.post('/api/register', async (req, res) => {
 // Verify email confirmation code
 app.post('/api/verify', async (req, res) => {
   try {
-    if (!verificationCollection || !usersCollection) {
-      return res.status(503).json({ error: 'Database not connected' })
-    }
-
     const { email, code } = req.body
 
     if (!email || !code) {
@@ -205,25 +177,25 @@ app.post('/api/verify', async (req, res) => {
     }
 
     // Find verification record
-    const verification = await verificationCollection.findOne({ email, code })
+    const verification = await Verification.findOne({ where: { email, code } })
     if (!verification) {
       return res.status(400).json({ error: 'Invalid confirmation code' })
     }
 
     // Check if code expired
     if (new Date() > verification.expiresAt) {
-      await verificationCollection.deleteOne({ _id: verification._id })
+      await verification.destroy()
       return res.status(400).json({ error: 'Confirmation code expired' })
     }
 
     // Mark user as verified
-    await usersCollection.updateOne(
-      { email },
-      { $set: { verified: true } }
+    await User.update(
+      { verified: true },
+      { where: { email } }
     )
 
     // Delete verification record
-    await verificationCollection.deleteOne({ _id: verification._id })
+    await verification.destroy()
 
     res.json({ message: 'Email verified successfully! You can now login.' })
   } catch (error) {
@@ -234,17 +206,13 @@ app.post('/api/verify', async (req, res) => {
 // Resend confirmation code
 app.post('/api/resend-code', async (req, res) => {
   try {
-    if (!verificationCollection || !usersCollection) {
-      return res.status(503).json({ error: 'Database not connected' })
-    }
-
     const { email } = req.body
 
     if (!email) {
       return res.status(400).json({ error: 'Email is required' })
     }
 
-    const user = await usersCollection.findOne({ email })
+    const user = await User.findOne({ where: { email } })
     if (!user) {
       return res.status(404).json({ error: 'User not found' })
     }
@@ -258,15 +226,14 @@ app.post('/api/resend-code', async (req, res) => {
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000)
 
     // Delete old verification record
-    await verificationCollection.deleteOne({ email })
+    await Verification.destroy({ where: { email } })
 
     // Create new verification record
-    await verificationCollection.insertOne({
-      userId: user._id,
+    await Verification.create({
+      userId: user.id,
       email,
       code: newCode,
-      expiresAt,
-      createdAt: new Date()
+      expiresAt
     })
 
     // Send new confirmation email
@@ -281,13 +248,8 @@ app.post('/api/resend-code', async (req, res) => {
 // Login user
 app.post('/api/login', async (req, res) => {
   try {
-    if (!usersCollection) {
-      return res.status(503).json({ error: 'Database not connected' })
-    }
-    
     const { identifier, password } = req.body
 
-    console.log('[LOGIN] Request body:', req.body)
     console.log('[LOGIN] Attempting login with identifier:', identifier)
 
     if (!identifier || !password) {
@@ -296,13 +258,14 @@ app.post('/api/login', async (req, res) => {
     }
 
     // Find user by email, phone number, or username
-    const user = await usersCollection.findOne({
-      $or: [
-        { email: identifier },
-        { phoneNumber: identifier },
-        { username: identifier }
-      ]
-    })
+    const user = await User.findOne({
+      where: sequelize.where(
+        sequelize.fn('LOWER', sequelize.col('email')),
+        'LIKE',
+        `%${identifier.toLowerCase()}%`
+      )
+    }) || await User.findOne({ where: { phoneNumber: identifier } })
+      || await User.findOne({ where: { username: identifier } })
     
     console.log('[LOGIN] User query result:', user ? `Found: ${user.username}` : 'NOT FOUND')
     
@@ -328,7 +291,7 @@ app.post('/api/login', async (req, res) => {
     res.json({
       message: 'Login successful',
       user: {
-        id: user._id,
+        id: user.id,
         email: user.email,
         username: user.username,
         role: user.role
@@ -339,20 +302,25 @@ app.post('/api/login', async (req, res) => {
   }
 })
 
+// ============ USER MANAGEMENT ENDPOINTS ============
+
 // Get user profile
 app.get('/api/user/:id', async (req, res) => {
   try {
-    const { ObjectId } = await import('mongodb')
-    const user = await usersCollection.findOne({ _id: new ObjectId(req.params.id) })
+    const user = await User.findByPk(req.params.id, {
+      attributes: { exclude: ['password'] }
+    })
 
     if (!user) {
       return res.status(404).json({ error: 'User not found' })
     }
 
     res.json({
-      id: user._id,
+      id: user.id,
       email: user.email,
       username: user.username,
+      fullName: user.fullName,
+      phoneNumber: user.phoneNumber,
       role: user.role,
       verified: user.verified,
       createdAt: user.createdAt
@@ -365,18 +333,14 @@ app.get('/api/user/:id', async (req, res) => {
 // Get all users (Admin only)
 app.get('/api/users', async (req, res) => {
   try {
-    if (!usersCollection) {
-      return res.status(503).json({ error: 'Database not connected' })
-    }
-
-    const users = await usersCollection
-      .find({}, { projection: { password: 0 } })
-      .toArray()
+    const users = await User.findAll({
+      attributes: { exclude: ['password'] }
+    })
 
     res.json({
       total: users.length,
       users: users.map(user => ({
-        id: user._id,
+        id: user.id,
         email: user.email,
         username: user.username,
         fullName: user.fullName,
@@ -401,11 +365,6 @@ app.get('/api/health', (req, res) => {
 // Edit user (Admin only)
 app.put('/api/users/:id', async (req, res) => {
   try {
-    if (!usersCollection) {
-      return res.status(503).json({ error: 'Database not connected' })
-    }
-
-    const { ObjectId } = await import('mongodb')
     const { fullName, phoneNumber, licenseNumber, licenseExpiryDate } = req.body
 
     // Only update provided fields
@@ -414,18 +373,17 @@ app.put('/api/users/:id', async (req, res) => {
     if (phoneNumber !== undefined) updateFields.phoneNumber = phoneNumber
     if (licenseNumber !== undefined) updateFields.licenseNumber = licenseNumber
     if (licenseExpiryDate !== undefined) updateFields.licenseExpiryDate = licenseExpiryDate
-    updateFields.updatedAt = new Date()
 
-    if (Object.keys(updateFields).length === 1) { // only updatedAt present
+    if (Object.keys(updateFields).length === 0) {
       return res.status(400).json({ error: 'No valid fields provided for update' })
     }
 
-    const result = await usersCollection.updateOne(
-      { _id: new ObjectId(req.params.id) },
-      { $set: updateFields }
+    const [updated] = await User.update(
+      updateFields,
+      { where: { id: req.params.id } }
     )
 
-    if (result.matchedCount === 0) {
+    if (updated === 0) {
       return res.status(404).json({ error: 'User not found' })
     }
 
@@ -438,14 +396,9 @@ app.put('/api/users/:id', async (req, res) => {
 // Delete user (Admin only)
 app.delete('/api/users/:id', async (req, res) => {
   try {
-    if (!usersCollection) {
-      return res.status(503).json({ error: 'Database not connected' })
-    }
+    const deleted = await User.destroy({ where: { id: req.params.id } })
 
-    const { ObjectId } = await import('mongodb')
-    const result = await usersCollection.deleteOne({ _id: new ObjectId(req.params.id) })
-
-    if (result.deletedCount === 0) {
+    if (deleted === 0) {
       return res.status(404).json({ error: 'User not found' })
     }
 
@@ -460,10 +413,6 @@ app.delete('/api/users/:id', async (req, res) => {
 // Guard check-in
 app.post('/api/attendance/checkin', async (req, res) => {
   try {
-    if (!attendanceCollection || !usersCollection) {
-      return res.status(503).json({ error: 'Database not connected' })
-    }
-
     const { guardId } = req.body
 
     if (!guardId) {
@@ -471,8 +420,7 @@ app.post('/api/attendance/checkin', async (req, res) => {
     }
 
     // Check if guard exists
-    const { ObjectId } = await import('mongodb')
-    const guard = await usersCollection.findOne({ _id: new ObjectId(guardId) })
+    const guard = await User.findByPk(guardId)
     if (!guard) {
       return res.status(404).json({ error: 'Guard not found' })
     }
@@ -480,34 +428,31 @@ app.post('/api/attendance/checkin', async (req, res) => {
     // Check if already checked in today
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-    const tomorrow = new Date(today)
-    tomorrow.setDate(tomorrow.getDate() + 1)
 
-    const existingCheckin = await attendanceCollection.findOne({
-      guardId: new ObjectId(guardId),
-      date: { $gte: today, $lt: tomorrow },
-      checkIn: { $exists: true }
+    const existingCheckin = await Attendance.findOne({
+      where: {
+        userId: guardId,
+        date: today,
+        checkInTime: { [sequelize.Op.not]: null }
+      }
     })
 
-    if (existingCheckin && !existingCheckin.checkOut) {
+    if (existingCheckin && !existingCheckin.checkOutTime) {
       return res.status(400).json({ error: 'Already checked in today. Please check out first.' })
     }
 
     // Record check-in
-    const record = {
-      guardId: new ObjectId(guardId),
-      date: new Date(),
-      checkIn: new Date(),
-      checkOut: null,
-      createdAt: new Date()
-    }
-
-    const result = await attendanceCollection.insertOne(record)
+    const attendance = await Attendance.create({
+      userId: guardId,
+      date: today,
+      checkInTime: new Date(),
+      status: 'present'
+    })
 
     res.json({ 
       message: 'Check-in successful',
-      attendanceId: result.insertedId,
-      checkInTime: record.checkIn
+      attendanceId: attendance.id,
+      checkInTime: attendance.checkInTime
     })
   } catch (error) {
     res.status(500).json({ error: error.message })
@@ -517,23 +462,18 @@ app.post('/api/attendance/checkin', async (req, res) => {
 // Guard check-out
 app.post('/api/attendance/checkout', async (req, res) => {
   try {
-    if (!attendanceCollection) {
-      return res.status(503).json({ error: 'Database not connected' })
-    }
-
     const { attendanceId } = req.body
 
     if (!attendanceId) {
       return res.status(400).json({ error: 'Attendance ID is required' })
     }
 
-    const { ObjectId } = await import('mongodb')
-    const result = await attendanceCollection.updateOne(
-      { _id: new ObjectId(attendanceId) },
-      { $set: { checkOut: new Date() } }
+    const [updated] = await Attendance.update(
+      { checkOutTime: new Date() },
+      { where: { id: attendanceId } }
     )
 
-    if (result.matchedCount === 0) {
+    if (updated === 0) {
       return res.status(404).json({ error: 'Attendance record not found' })
     }
 
@@ -549,42 +489,34 @@ app.post('/api/attendance/checkout', async (req, res) => {
 // Submit guard feedback
 app.post('/api/feedback', async (req, res) => {
   try {
-    if (!feedbackCollection || !usersCollection) {
-      return res.status(503).json({ error: 'Database not connected' })
-    }
+    const { userId, title, message, rating } = req.body
 
-    const { guardId, rating, comment, submittedBy } = req.body
-
-    if (!guardId || !rating || !submittedBy) {
-      return res.status(400).json({ error: 'Guard ID, rating, and submitted by are required' })
+    if (!userId || !title || !message || !rating) {
+      return res.status(400).json({ error: 'userId, title, message, and rating are required' })
     }
 
     if (rating < 1 || rating > 5) {
       return res.status(400).json({ error: 'Rating must be between 1 and 5' })
     }
 
-    const { ObjectId } = await import('mongodb')
-    
-    // Verify guard exists
-    const guard = await usersCollection.findOne({ _id: new ObjectId(guardId) })
-    if (!guard) {
-      return res.status(404).json({ error: 'Guard not found' })
+    // Verify user exists
+    const user = await User.findByPk(userId)
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' })
     }
 
-    const feedback = {
-      guardId: new ObjectId(guardId),
+    const feedback = await Feedback.create({
+      userId,
+      title,
+      message,
       rating,
-      comment: comment || '',
-      submittedBy,
-      submittedAt: new Date(),
-      createdAt: new Date()
-    }
-
-    const result = await feedbackCollection.insertOne(feedback)
+      category: 'general',
+      status: 'open'
+    })
 
     res.json({ 
       message: 'Feedback submitted successfully',
-      feedbackId: result.insertedId
+      feedbackId: feedback.id
     })
   } catch (error) {
     res.status(500).json({ error: error.message })
@@ -594,15 +526,7 @@ app.post('/api/feedback', async (req, res) => {
 // Get merit scores (all guards ranked)
 app.get('/api/performance/merit-scores', async (req, res) => {
   try {
-    if (!usersCollection || !attendanceCollection || !feedbackCollection) {
-      return res.status(503).json({ error: 'Database not connected' })
-    }
-
-    const { ObjectId } = await import('mongodb')
-    
-    // Get all security guards (role: 'user')
-    const guards = await usersCollection.find({ role: 'user' }).toArray()
-
+    const guards = await User.findAll({ where: { role: 'user' } })
     const meritScores = []
     
     for (const guard of guards) {
@@ -611,26 +535,29 @@ app.get('/api/performance/merit-scores', async (req, res) => {
         const thirtyDaysAgo = new Date()
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
         
-        const attendanceRecords = await attendanceCollection.find({
-          guardId: guard._id,
-          date: { $gte: thirtyDaysAgo }
-        }).toArray()
+        const attendanceRecords = await Attendance.findAll({
+          where: {
+            userId: guard.id,
+            date: { [sequelize.Op.gte]: thirtyDaysAgo }
+          }
+        })
 
-        const daysPresent = attendanceRecords.filter(r => r.checkIn && r.checkOut).length
+        const daysPresent = attendanceRecords.filter(r => r.checkInTime && r.checkOutTime).length
         const totalWorkingDays = 30
         const attendanceScore = (daysPresent / totalWorkingDays) * 100
 
         // Punctuality score (30%) - on time if checked in before 9 AM
         const onTimeCount = attendanceRecords.filter(r => {
-          const checkInHour = new Date(r.checkIn).getHours()
+          if (!r.checkInTime) return false
+          const checkInHour = new Date(r.checkInTime).getHours()
           return checkInHour <= 9
         }).length
         const punctualityScore = (onTimeCount / Math.max(daysPresent, 1)) * 100
 
         // Feedback score (30%) - average rating
-        const feedbackRecords = await feedbackCollection.find({
-          guardId: guard._id
-        }).toArray()
+        const feedbackRecords = await Feedback.findAll({
+          where: { userId: guard.id }
+        })
 
         const feedbackScore = feedbackRecords.length > 0
           ? (feedbackRecords.reduce((sum, f) => sum + f.rating, 0) / feedbackRecords.length) * 20
@@ -640,7 +567,7 @@ app.get('/api/performance/merit-scores', async (req, res) => {
         const meritScore = (attendanceScore * 0.4) + (punctualityScore * 0.3) + (feedbackScore * 0.3)
 
         meritScores.push({
-          id: guard._id,
+          id: guard.id,
           name: guard.fullName || 'Unknown',
           email: guard.email || '',
           phone: guard.phoneNumber || '',
@@ -652,7 +579,7 @@ app.get('/api/performance/merit-scores', async (req, res) => {
           feedbackCount: feedbackRecords.length
         })
       } catch (guardError) {
-        console.error(`Error calculating merit for guard ${guard._id}:`, guardError.message)
+        console.error(`Error calculating merit for guard ${guard.id}:`, guardError.message)
       }
     }
 
@@ -672,15 +599,10 @@ app.get('/api/performance/merit-scores', async (req, res) => {
 // Get individual guard performance details
 app.get('/api/performance/guards/:id', async (req, res) => {
   try {
-    if (!usersCollection || !attendanceCollection || !feedbackCollection) {
-      return res.status(503).json({ error: 'Database not connected' })
-    }
-
-    const { ObjectId } = await import('mongodb')
-    const guardId = new ObjectId(req.params.id)
-
-    // Get guard
-    const guard = await usersCollection.findOne({ _id: guardId })
+    const guard = await User.findByPk(req.params.id, {
+      attributes: { exclude: ['password'] }
+    })
+    
     if (!guard) {
       return res.status(404).json({ error: 'Guard not found' })
     }
@@ -689,20 +611,25 @@ app.get('/api/performance/guards/:id', async (req, res) => {
     const thirtyDaysAgo = new Date()
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
     
-    const attendanceRecords = await attendanceCollection.find({
-      guardId,
-      date: { $gte: thirtyDaysAgo }
-    }).sort({ date: -1 }).toArray()
+    const attendanceRecords = await Attendance.findAll({
+      where: {
+        userId: req.params.id,
+        date: { [sequelize.Op.gte]: thirtyDaysAgo }
+      },
+      order: [['date', 'DESC']]
+    })
 
     // Get feedback records
-    const feedbackRecords = await feedbackCollection.find({
-      guardId
-    }).sort({ submittedAt: -1 }).toArray()
+    const feedbackRecords = await Feedback.findAll({
+      where: { userId: req.params.id },
+      order: [['createdAt', 'DESC']]
+    })
 
     // Calculate metrics
-    const daysPresent = attendanceRecords.filter(r => r.checkIn && r.checkOut).length
+    const daysPresent = attendanceRecords.filter(r => r.checkInTime && r.checkOutTime).length
     const onTimeCount = attendanceRecords.filter(r => {
-      const checkInHour = new Date(r.checkIn).getHours()
+      if (!r.checkInTime) return false
+      const checkInHour = new Date(r.checkInTime).getHours()
       return checkInHour <= 9
     }).length
 
@@ -716,7 +643,7 @@ app.get('/api/performance/guards/:id', async (req, res) => {
 
     res.json({
       guard: {
-        id: guard._id,
+        id: guard.id,
         name: guard.fullName,
         email: guard.email,
         phone: guard.phoneNumber,
@@ -735,8 +662,8 @@ app.get('/api/performance/guards/:id', async (req, res) => {
         lateCount: daysPresent - onTimeCount,
         records: attendanceRecords.map(r => ({
           date: r.date,
-          checkIn: r.checkIn,
-          checkOut: r.checkOut
+          checkInTime: r.checkInTime,
+          checkOutTime: r.checkOutTime
         }))
       },
       feedback: {
@@ -745,10 +672,10 @@ app.get('/api/performance/guards/:id', async (req, res) => {
           ? (feedbackRecords.reduce((sum, f) => sum + f.rating, 0) / feedbackRecords.length).toFixed(2)
           : 0,
         records: feedbackRecords.map(f => ({
+          title: f.title,
+          message: f.message,
           rating: f.rating,
-          comment: f.comment,
-          submittedBy: f.submittedBy,
-          submittedAt: f.submittedAt
+          createdAt: f.createdAt
         }))
       }
     })
@@ -762,35 +689,31 @@ app.get('/api/performance/guards/:id', async (req, res) => {
 // Add new firearm to inventory
 app.post('/api/firearms', async (req, res) => {
   try {
-    if (!firearmsCollection) {
-      return res.status(503).json({ error: 'Database not connected' })
-    }
-
-    const { serialNumber, model, condition, status } = req.body
+    const { serialNumber, model, caliber, type, manufacturer, condition, status } = req.body
 
     if (!serialNumber || !model || !condition || !status) {
-      return res.status(400).json({ error: 'All fields are required' })
+      return res.status(400).json({ error: 'All required fields must be provided' })
     }
 
     // Check if serial number already exists
-    const existing = await firearmsCollection.findOne({ serialNumber })
+    const existing = await Firearm.findOne({ where: { serialNumber } })
     if (existing) {
       return res.status(400).json({ error: 'Firearm with this serial number already exists' })
     }
 
-    const result = await firearmsCollection.insertOne({
+    const firearm = await Firearm.create({
       serialNumber,
       model,
+      caliber,
+      type,
+      manufacturer,
       condition,
-      status,
-      createdAt: new Date(),
-      lastMaintenanceDate: null,
-      currentAllocationId: null
+      status
     })
 
     res.status(201).json({
       message: 'Firearm added successfully',
-      firearmId: result.insertedId
+      firearmId: firearm.id
     })
   } catch (error) {
     res.status(500).json({ error: error.message })
@@ -800,21 +723,17 @@ app.post('/api/firearms', async (req, res) => {
 // Get all firearms
 app.get('/api/firearms', async (req, res) => {
   try {
-    if (!firearmsCollection) {
-      return res.status(503).json({ error: 'Database not connected' })
-    }
-
-    const firearms = await firearmsCollection.find({}).toArray()
+    const firearms = await Firearm.findAll()
 
     res.json(firearms.map(f => ({
-      _id: f._id,
+      id: f.id,
       serialNumber: f.serialNumber,
       type: f.type,
       model: f.model,
       caliber: f.caliber,
+      manufacturer: f.manufacturer,
       condition: f.condition,
       status: f.status,
-      location: f.location,
       lastMaintenance: f.lastMaintenance,
       lastMaintenanceDate: f.lastMaintenanceDate,
       createdAt: f.createdAt
@@ -827,40 +746,34 @@ app.get('/api/firearms', async (req, res) => {
 // Get single firearm details
 app.get('/api/firearms/:id', async (req, res) => {
   try {
-    if (!firearmsCollection || !firearmAllocationsCollection) {
-      return res.status(503).json({ error: 'Database not connected' })
-    }
-
-    const { ObjectId } = await import('mongodb')
-    const firearm = await firearmsCollection.findOne({ _id: new ObjectId(req.params.id) })
+    const firearm = await Firearm.findByPk(req.params.id)
 
     if (!firearm) {
       return res.status(404).json({ error: 'Firearm not found' })
     }
 
     // Get allocation history
-    const allocationHistory = await firearmAllocationsCollection
-      .find({ firearmId: firearm._id })
-      .sort({ issuedAt: -1 })
-      .limit(20)
-      .toArray()
+    const allocationHistory = await FirearmAllocation.findAll({
+      where: { firearmId: firearm.id },
+      order: [['allocationDate', 'DESC']],
+      limit: 20
+    })
 
     res.json({
       firearm: {
-        id: firearm._id,
+        id: firearm.id,
         serialNumber: firearm.serialNumber,
         model: firearm.model,
         condition: firearm.condition,
         status: firearm.status,
-        currentAllocationId: firearm.currentAllocationId,
         lastMaintenanceDate: firearm.lastMaintenanceDate,
         createdAt: firearm.createdAt
       },
       allocationHistory: allocationHistory.map(a => ({
-        id: a._id,
+        id: a.id,
         guardId: a.guardId,
-        issuedAt: a.issuedAt,
-        returnedAt: a.returnedAt,
+        allocationDate: a.allocationDate,
+        returnDate: a.returnDate,
         status: a.status
       }))
     })
@@ -872,23 +785,18 @@ app.get('/api/firearms/:id', async (req, res) => {
 // Update firearm condition/status
 app.put('/api/firearms/:id', async (req, res) => {
   try {
-    if (!firearmsCollection) {
-      return res.status(503).json({ error: 'Database not connected' })
-    }
-
-    const { ObjectId } = await import('mongodb')
     const { condition, status } = req.body
 
     const updateData = {}
     if (condition) updateData.condition = condition
     if (status) updateData.status = status
 
-    const result = await firearmsCollection.updateOne(
-      { _id: new ObjectId(req.params.id) },
-      { $set: updateData }
+    const [updated] = await Firearm.update(
+      updateData,
+      { where: { id: req.params.id } }
     )
 
-    if (result.matchedCount === 0) {
+    if (updated === 0) {
       return res.status(404).json({ error: 'Firearm not found' })
     }
 
@@ -901,26 +809,21 @@ app.put('/api/firearms/:id', async (req, res) => {
 // Delete firearm (only if not allocated)
 app.delete('/api/firearms/:id', async (req, res) => {
   try {
-    if (!firearmsCollection || !firearmAllocationsCollection) {
-      return res.status(503).json({ error: 'Database not connected' })
-    }
-
-    const { ObjectId } = await import('mongodb')
-    const firearmId = new ObjectId(req.params.id)
-
     // Check if firearm is currently allocated
-    const allocation = await firearmAllocationsCollection.findOne({
-      firearmId,
-      returnedAt: null
+    const allocation = await FirearmAllocation.findOne({
+      where: {
+        firearmId: req.params.id,
+        returnDate: null
+      }
     })
 
     if (allocation) {
       return res.status(400).json({ error: 'Cannot delete firearm that is currently allocated' })
     }
 
-    const result = await firearmsCollection.deleteOne({ _id: firearmId })
+    const deleted = await Firearm.destroy({ where: { id: req.params.id } })
 
-    if (result.deletedCount === 0) {
+    if (deleted === 0) {
       return res.status(404).json({ error: 'Firearm not found' })
     }
 
@@ -935,49 +838,47 @@ app.delete('/api/firearms/:id', async (req, res) => {
 // Add/update guard firearm permit
 app.post('/api/guard-firearm-permits', async (req, res) => {
   try {
-    if (!guardFirearmPermitsCollection || !usersCollection) {
-      return res.status(503).json({ error: 'Database not connected' })
-    }
+    const { guardId, permitNumber, issueDate, expiryDate, permitType, authorizedWeapons } = req.body
 
-    const { guardId, permitNumber, trainingDate, expiryDate } = req.body
-
-    if (!guardId || !permitNumber || !trainingDate || !expiryDate) {
+    if (!guardId || !permitNumber || !issueDate || !expiryDate) {
       return res.status(400).json({ error: 'All fields are required' })
     }
 
-    const { ObjectId } = await import('mongodb')
-
     // Check if guard exists
-    const guard = await usersCollection.findOne({ _id: new ObjectId(guardId) })
+    const guard = await User.findByPk(guardId)
     if (!guard) {
       return res.status(404).json({ error: 'Guard not found' })
     }
 
-    // Check if permit already exists
-    const existing = await guardFirearmPermitsCollection.findOne({ guardId: new ObjectId(guardId) })
+    // Check if permit already exists for this guard
+    const existingPermit = await GuardFirearmPermit.findOne({ where: { guardId } })
 
-    if (existing) {
+    if (existingPermit) {
       // Update existing permit
-      const result = await guardFirearmPermitsCollection.updateOne(
-        { guardId: new ObjectId(guardId) },
-        { $set: { permitNumber, trainingDate: new Date(trainingDate), expiryDate: new Date(expiryDate), updatedAt: new Date() } }
-      )
+      await existingPermit.update({
+        permitNumber,
+        issueDate: new Date(issueDate),
+        expiryDate: new Date(expiryDate),
+        permitType,
+        authorizedWeapons
+      })
       return res.json({ message: 'Permit updated successfully' })
     }
 
     // Create new permit
-    const result = await guardFirearmPermitsCollection.insertOne({
-      guardId: new ObjectId(guardId),
+    const permit = await GuardFirearmPermit.create({
+      guardId,
       permitNumber,
-      trainingDate: new Date(trainingDate),
+      issueDate: new Date(issueDate),
       expiryDate: new Date(expiryDate),
-      status: 'active',
-      createdAt: new Date()
+      permitType,
+      authorizedWeapons,
+      status: 'active'
     })
 
     res.status(201).json({
       message: 'Permit added successfully',
-      permitId: result.insertedId
+      permitId: permit.id
     })
   } catch (error) {
     res.status(500).json({ error: error.message })
@@ -987,12 +888,9 @@ app.post('/api/guard-firearm-permits', async (req, res) => {
 // Get guard firearm permit
 app.get('/api/guard-firearm-permits/:guardId', async (req, res) => {
   try {
-    if (!guardFirearmPermitsCollection) {
-      return res.status(503).json({ error: 'Database not connected' })
-    }
-
-    const { ObjectId } = await import('mongodb')
-    const permit = await guardFirearmPermitsCollection.findOne({ guardId: new ObjectId(req.params.guardId) })
+    const permit = await GuardFirearmPermit.findOne({
+      where: { guardId: req.params.guardId }
+    })
 
     if (!permit) {
       return res.status(404).json({ error: 'No permit found for this guard' })
@@ -1001,11 +899,13 @@ app.get('/api/guard-firearm-permits/:guardId', async (req, res) => {
     const isExpired = new Date() > new Date(permit.expiryDate)
 
     res.json({
-      id: permit._id,
+      id: permit.id,
       guardId: permit.guardId,
       permitNumber: permit.permitNumber,
-      trainingDate: permit.trainingDate,
+      issueDate: permit.issueDate,
       expiryDate: permit.expiryDate,
+      permitType: permit.permitType,
+      authorizedWeapons: permit.authorizedWeapons,
       status: isExpired ? 'expired' : 'active',
       isExpired
     })
@@ -1019,26 +919,20 @@ app.get('/api/guard-firearm-permits/:guardId', async (req, res) => {
 // Issue firearm to guard
 app.post('/api/firearm-allocation/issue', async (req, res) => {
   try {
-    if (!firearmAllocationsCollection || !firearmsCollection || !guardFirearmPermitsCollection || !usersCollection) {
-      return res.status(503).json({ error: 'Database not connected' })
-    }
-
     const { firearmId, guardId, notes } = req.body
 
     if (!firearmId || !guardId) {
       return res.status(400).json({ error: 'Firearm ID and Guard ID are required' })
     }
 
-    const { ObjectId } = await import('mongodb')
-
     // Verify guard exists
-    const guard = await usersCollection.findOne({ _id: new ObjectId(guardId) })
+    const guard = await User.findByPk(guardId)
     if (!guard) {
       return res.status(404).json({ error: 'Guard not found' })
     }
 
     // Verify guard has valid permit
-    const permit = await guardFirearmPermitsCollection.findOne({ guardId: new ObjectId(guardId) })
+    const permit = await GuardFirearmPermit.findOne({ where: { guardId } })
     if (!permit) {
       return res.status(400).json({ error: 'Guard does not have a firearm permit' })
     }
@@ -1049,7 +943,7 @@ app.post('/api/firearm-allocation/issue', async (req, res) => {
     }
 
     // Verify firearm exists and is available
-    const firearm = await firearmsCollection.findOne({ _id: new ObjectId(firearmId) })
+    const firearm = await Firearm.findByPk(firearmId)
     if (!firearm) {
       return res.status(404).json({ error: 'Firearm not found' })
     }
@@ -1058,33 +952,21 @@ app.post('/api/firearm-allocation/issue', async (req, res) => {
       return res.status(400).json({ error: 'Firearm is not available for allocation' })
     }
 
-    // Check if firearm is already allocated
-    if (firearm.currentAllocationId) {
-      return res.status(400).json({ error: 'Firearm is already allocated' })
-    }
-
     // Create allocation record
-    const allocation = {
-      firearmId: new ObjectId(firearmId),
-      guardId: new ObjectId(guardId),
-      issuedAt: new Date(),
-      returnedAt: null,
+    const allocation = await FirearmAllocation.create({
+      firearmId,
+      guardId,
+      allocationDate: new Date(),
       status: 'allocated',
-      notes: notes || '',
-      createdAt: new Date()
-    }
-
-    const result = await firearmAllocationsCollection.insertOne(allocation)
+      notes: notes || ''
+    })
 
     // Update firearm status
-    await firearmsCollection.updateOne(
-      { _id: new ObjectId(firearmId) },
-      { $set: { status: 'allocated', currentAllocationId: result.insertedId } }
-    )
+    await firearm.update({ status: 'allocated' })
 
     res.status(201).json({
       message: 'Firearm issued successfully',
-      allocationId: result.insertedId
+      allocationId: allocation.id
     })
   } catch (error) {
     res.status(500).json({ error: error.message })
@@ -1094,46 +976,35 @@ app.post('/api/firearm-allocation/issue', async (req, res) => {
 // Return firearm from guard
 app.post('/api/firearm-allocation/return', async (req, res) => {
   try {
-    if (!firearmAllocationsCollection || !firearmsCollection) {
-      return res.status(503).json({ error: 'Database not connected' })
-    }
-
     const { allocationId, condition, notes } = req.body
 
     if (!allocationId) {
       return res.status(400).json({ error: 'Allocation ID is required' })
     }
 
-    const { ObjectId } = await import('mongodb')
-
     // Find allocation
-    const allocation = await firearmAllocationsCollection.findOne({ _id: new ObjectId(allocationId) })
+    const allocation = await FirearmAllocation.findByPk(allocationId)
     if (!allocation) {
       return res.status(404).json({ error: 'Allocation not found' })
     }
 
-    if (allocation.returnedAt) {
+    if (allocation.returnDate) {
       return res.status(400).json({ error: 'Firearm has already been returned' })
     }
 
     // Update allocation
-    const returnData = {
-      returnedAt: new Date(),
+    await allocation.update({
+      returnDate: new Date(),
       status: 'returned',
-      returnCondition: condition || 'good',
-      returnNotes: notes || ''
-    }
-
-    await firearmAllocationsCollection.updateOne(
-      { _id: new ObjectId(allocationId) },
-      { $set: returnData }
-    )
+      notes: notes || ''
+    })
 
     // Update firearm status
-    await firearmsCollection.updateOne(
-      { _id: allocation.firearmId },
-      { $set: { status: 'available', currentAllocationId: null, condition: condition || 'good' } }
-    )
+    const firearm = await Firearm.findByPk(allocation.firearmId)
+    await firearm.update({
+      status: 'available',
+      condition: condition || firearm.condition
+    })
 
     res.json({ message: 'Firearm returned successfully' })
   } catch (error) {
@@ -1144,27 +1015,20 @@ app.post('/api/firearm-allocation/return', async (req, res) => {
 // Get allocation history for a guard
 app.get('/api/guard-allocations/:guardId', async (req, res) => {
   try {
-    if (!firearmAllocationsCollection) {
-      return res.status(503).json({ error: 'Database not connected' })
-    }
-
-    const { ObjectId } = await import('mongodb')
-
-    const allocations = await firearmAllocationsCollection
-      .find({ guardId: new ObjectId(req.params.guardId) })
-      .sort({ issuedAt: -1 })
-      .toArray()
+    const allocations = await FirearmAllocation.findAll({
+      where: { guardId: req.params.guardId },
+      order: [['allocationDate', 'DESC']]
+    })
 
     res.json({
       total: allocations.length,
       allocations: allocations.map(a => ({
-        id: a._id,
+        id: a.id,
         firearmId: a.firearmId,
-        issuedAt: a.issuedAt,
-        returnedAt: a.returnedAt,
+        allocationDate: a.allocationDate,
+        returnDate: a.returnDate,
         status: a.status,
-        notes: a.notes,
-        returnCondition: a.returnCondition
+        notes: a.notes
       }))
     })
   } catch (error) {
@@ -1175,21 +1039,20 @@ app.get('/api/guard-allocations/:guardId', async (req, res) => {
 // Get current active allocations
 app.get('/api/firearm-allocations/active', async (req, res) => {
   try {
-    if (!firearmAllocationsCollection) {
-      return res.status(503).json({ error: 'Database not connected' })
-    }
-
-    const activeAllocations = await firearmAllocationsCollection
-      .find({ returnedAt: null, status: 'allocated' })
-      .toArray()
+    const activeAllocations = await FirearmAllocation.findAll({
+      where: {
+        returnDate: null,
+        status: 'allocated'
+      }
+    })
 
     res.json({
       total: activeAllocations.length,
       allocations: activeAllocations.map(a => ({
-        id: a._id,
+        id: a.id,
         firearmId: a.firearmId,
         guardId: a.guardId,
-        issuedAt: a.issuedAt,
+        allocationDate: a.allocationDate,
         status: a.status
       }))
     })
@@ -1203,44 +1066,38 @@ app.get('/api/firearm-allocations/active', async (req, res) => {
 // Record maintenance
 app.post('/api/firearm-maintenance', async (req, res) => {
   try {
-    if (!firearmMaintenanceCollection || !firearmsCollection) {
-      return res.status(503).json({ error: 'Database not connected' })
-    }
-
-    const { firearmId, maintenanceType, notes } = req.body
+    const { firearmId, maintenanceType, description, technician, cost, nextMaintenanceDate } = req.body
 
     if (!firearmId || !maintenanceType) {
       return res.status(400).json({ error: 'Firearm ID and maintenance type are required' })
     }
 
-    const { ObjectId } = await import('mongodb')
-
     // Verify firearm exists
-    const firearm = await firearmsCollection.findOne({ _id: new ObjectId(firearmId) })
+    const firearm = await Firearm.findByPk(firearmId)
     if (!firearm) {
       return res.status(404).json({ error: 'Firearm not found' })
     }
 
     // Record maintenance
-    const result = await firearmMaintenanceCollection.insertOne({
-      firearmId: new ObjectId(firearmId),
+    const maintenance = await FirearmMaintenance.create({
+      firearmId,
       maintenanceType,
-      notes: notes || '',
-      maintenanceDate: new Date(),
-      createdAt: new Date()
+      description,
+      technician,
+      cost,
+      nextMaintenanceDate,
+      status: 'completed',
+      maintenanceDate: new Date()
     })
 
     // Update firearm's last maintenance date
     if (maintenanceType === 'service' || maintenanceType === 'inspection') {
-      await firearmsCollection.updateOne(
-        { _id: new ObjectId(firearmId) },
-        { $set: { lastMaintenanceDate: new Date() } }
-      )
+      await firearm.update({ lastMaintenanceDate: new Date() })
     }
 
     res.status(201).json({
       message: 'Maintenance recorded successfully',
-      maintenanceId: result.insertedId
+      maintenanceId: maintenance.id
     })
   } catch (error) {
     res.status(500).json({ error: error.message })
@@ -1250,119 +1107,24 @@ app.post('/api/firearm-maintenance', async (req, res) => {
 // Get maintenance history for firearm
 app.get('/api/firearm-maintenance/:firearmId', async (req, res) => {
   try {
-    if (!firearmMaintenanceCollection) {
-      return res.status(503).json({ error: 'Database not connected' })
-    }
-
-    const { ObjectId } = await import('mongodb')
-
-    const maintenance = await firearmMaintenanceCollection
-      .find({ firearmId: new ObjectId(req.params.firearmId) })
-      .sort({ maintenanceDate: -1 })
-      .toArray()
+    const maintenance = await FirearmMaintenance.findAll({
+      where: { firearmId: req.params.firearmId },
+      order: [['maintenanceDate', 'DESC']]
+    })
 
     res.json({
       total: maintenance.length,
       records: maintenance.map(m => ({
-        id: m._id,
+        id: m.id,
         maintenanceType: m.maintenanceType,
-        notes: m.notes,
-        maintenanceDate: m.maintenanceDate
+        description: m.description,
+        technician: m.technician,
+        cost: m.cost,
+        maintenanceDate: m.maintenanceDate,
+        nextMaintenanceDate: m.nextMaintenanceDate,
+        status: m.status
       }))
     })
-  } catch (error) {
-    res.status(500).json({ error: error.message })
-  }
-})
-
-// ==================== REPORTS API ====================
-
-// Get all firearm allocations (for reports)
-app.get('/api/firearm-allocations', async (req, res) => {
-  try {
-    if (!firearmAllocationsCollection) {
-      return res.status(503).json({ error: 'Database not connected' })
-    }
-
-    const allocations = await firearmAllocationsCollection
-      .find({})
-      .sort({ allocationDate: -1 })
-      .toArray()
-
-    res.json(allocations.map(a => ({
-      _id: a._id,
-      guardId: a.guardId,
-      guardName: a.guardName,
-      firearmId: a.firearmId,
-      firearmSerialNumber: a.firearmSerialNumber,
-      firearmModel: a.firearmModel,
-      firearmCaliber: a.firearmCaliber,
-      allocationDate: a.allocationDate,
-      returnDate: a.returnDate,
-      purpose: a.purpose,
-      status: a.status,
-      condition: a.condition,
-      conditionOnReturn: a.conditionOnReturn,
-      notes: a.notes
-    })))
-  } catch (error) {
-    res.status(500).json({ error: error.message })
-  }
-})
-
-// Get all guard firearm permits (for reports)
-app.get('/api/guard-firearm-permits', async (req, res) => {
-  try {
-    if (!guardFirearmPermitsCollection) {
-      return res.status(503).json({ error: 'Database not connected' })
-    }
-
-    const permits = await guardFirearmPermitsCollection
-      .find({})
-      .sort({ issueDate: -1 })
-      .toArray()
-
-    res.json(permits.map(p => ({
-      _id: p._id,
-      guardId: p.guardId,
-      guardName: p.guardName,
-      firearmId: p.firearmId,
-      firearmSerialNumber: p.firearmSerialNumber,
-      issueDate: p.issueDate,
-      expiryDate: p.expiryDate,
-      authority: p.authority,
-      permitNumber: p.permitNumber,
-      status: p.status,
-      renewalRequestDate: p.renewalRequestDate
-    })))
-  } catch (error) {
-    res.status(500).json({ error: error.message })
-  }
-})
-
-// Get all firearm maintenance records (for reports)
-app.get('/api/firearm-maintenance', async (req, res) => {
-  try {
-    if (!firearmMaintenanceCollection) {
-      return res.status(503).json({ error: 'Database not connected' })
-    }
-
-    const maintenance = await firearmMaintenanceCollection
-      .find({})
-      .sort({ date: -1 })
-      .toArray()
-
-    res.json(maintenance.map(m => ({
-      _id: m._id,
-      firearmId: m.firearmId,
-      firearmSerialNumber: m.firearmSerialNumber,
-      maintenanceType: m.maintenanceType,
-      date: m.date,
-      performedBy: m.performedBy,
-      notes: m.notes,
-      nextDueDate: m.nextDueDate,
-      cost: m.cost
-    })))
   } catch (error) {
     res.status(500).json({ error: error.message })
   }
@@ -1373,34 +1135,23 @@ app.get('/api/firearm-maintenance', async (req, res) => {
 // Create alert
 app.post('/api/alerts', async (req, res) => {
   try {
-    if (!allocationAlertsCollection) {
-      return res.status(503).json({ error: 'Database not connected' })
-    }
+    const { alertType, message, severity, allocationId } = req.body
 
-    const { type, title, message, guardId, firearmId, priority, relatedId } = req.body
-
-    if (!type || !title || !message) {
+    if (!alertType || !message) {
       return res.status(400).json({ error: 'Missing required fields' })
     }
 
-    const alert = {
-      type, // 'permit_expiry', 'maintenance_due', 'low_stock', 'allocation', 'general'
-      title,
+    const alert = await AllocationAlert.create({
+      allocationId,
+      alertType,
       message,
-      guardId: guardId || null,
-      firearmId: firearmId || null,
-      priority: priority || 'medium', // 'low', 'medium', 'high', 'critical'
-      relatedId: relatedId || null,
-      isRead: false,
-      createdAt: new Date(),
-      createdBy: req.body.createdBy || 'system'
-    }
-
-    const result = await allocationAlertsCollection.insertOne(alert)
+      severity: severity || 'medium',
+      isResolved: false
+    })
 
     res.status(201).json({
       message: 'Alert created successfully',
-      alertId: result.insertedId
+      alertId: alert.id
     })
   } catch (error) {
     res.status(500).json({ error: error.message })
@@ -1410,84 +1161,33 @@ app.post('/api/alerts', async (req, res) => {
 // Get all alerts (with filtering)
 app.get('/api/alerts', async (req, res) => {
   try {
-    if (!allocationAlertsCollection) {
-      return res.status(503).json({ error: 'Database not connected' })
-    }
+    const { alertType, severity, isResolved, limit = 50, skip = 0 } = req.query
+    const where = {}
 
-    const { type, priority, isRead, guardId, limit = 50, skip = 0 } = req.query
-    const filter = {}
+    if (alertType) where.alertType = alertType
+    if (severity) where.severity = severity
+    if (isResolved !== undefined) where.isResolved = isResolved === 'true'
 
-    if (type) filter.type = type
-    if (priority) filter.priority = priority
-    if (isRead !== undefined) filter.isRead = isRead === 'true'
-    if (guardId) {
-      const { ObjectId } = await import('mongodb')
-      filter.guardId = new ObjectId(guardId)
-    }
+    const alerts = await AllocationAlert.findAll({
+      where,
+      order: [['createdAt', 'DESC']],
+      limit: parseInt(limit),
+      offset: parseInt(skip)
+    })
 
-    const alerts = await allocationAlertsCollection
-      .find(filter)
-      .sort({ createdAt: -1 })
-      .skip(parseInt(skip))
-      .limit(parseInt(limit))
-      .toArray()
-
-    const total = await allocationAlertsCollection.countDocuments(filter)
-    const unreadCount = await allocationAlertsCollection.countDocuments({ ...filter, isRead: false })
+    const total = await AllocationAlert.count({ where })
+    const unreadCount = await AllocationAlert.count({ ...where, isResolved: false })
 
     res.json({
       total,
       unreadCount,
       alerts: alerts.map(a => ({
-        id: a._id,
-        type: a.type,
-        title: a.title,
+        id: a.id,
+        alertType: a.alertType,
         message: a.message,
-        guardId: a.guardId,
-        firearmId: a.firearmId,
-        priority: a.priority,
-        isRead: a.isRead,
-        createdAt: a.createdAt,
-        createdBy: a.createdBy
-      }))
-    })
-  } catch (error) {
-    res.status(500).json({ error: error.message })
-  }
-})
-
-// Get alerts for specific user/guard
-app.get('/api/alerts/user/:userId', async (req, res) => {
-  try {
-    if (!allocationAlertsCollection) {
-      return res.status(503).json({ error: 'Database not connected' })
-    }
-
-    const { ObjectId } = await import('mongodb')
-    const { limit = 20, skip = 0 } = req.query
-
-    const alerts = await allocationAlertsCollection
-      .find({ guardId: new ObjectId(req.params.userId) })
-      .sort({ createdAt: -1 })
-      .skip(parseInt(skip))
-      .limit(parseInt(limit))
-      .toArray()
-
-    const unreadCount = await allocationAlertsCollection.countDocuments({
-      guardId: new ObjectId(req.params.userId),
-      isRead: false
-    })
-
-    res.json({
-      total: alerts.length,
-      unreadCount,
-      alerts: alerts.map(a => ({
-        id: a._id,
-        type: a.type,
-        title: a.title,
-        message: a.message,
-        priority: a.priority,
-        isRead: a.isRead,
+        severity: a.severity,
+        isResolved: a.isResolved,
+        allocationId: a.allocationId,
         createdAt: a.createdAt
       }))
     })
@@ -1499,48 +1199,14 @@ app.get('/api/alerts/user/:userId', async (req, res) => {
 // Mark alert as read
 app.patch('/api/alerts/:alertId/read', async (req, res) => {
   try {
-    if (!allocationAlertsCollection) {
-      return res.status(503).json({ error: 'Database not connected' })
-    }
-
-    const { ObjectId } = await import('mongodb')
-
-    const result = await allocationAlertsCollection.updateOne(
-      { _id: new ObjectId(req.params.alertId) },
-      { $set: { isRead: true, readAt: new Date() } }
+    const [updated] = await AllocationAlert.update(
+      { isResolved: true, resolvedAt: new Date() },
+      { where: { id: req.params.alertId } }
     )
 
     res.json({
-      message: 'Alert marked as read',
-      modifiedCount: result.modifiedCount
-    })
-  } catch (error) {
-    res.status(500).json({ error: error.message })
-  }
-})
-
-// Mark multiple alerts as read
-app.patch('/api/alerts/read-multiple', async (req, res) => {
-  try {
-    if (!allocationAlertsCollection) {
-      return res.status(503).json({ error: 'Database not connected' })
-    }
-
-    const { ObjectId } = await import('mongodb')
-    const { alertIds } = req.body
-
-    if (!Array.isArray(alertIds)) {
-      return res.status(400).json({ error: 'alertIds must be an array' })
-    }
-
-    const result = await allocationAlertsCollection.updateMany(
-      { _id: { $in: alertIds.map(id => new ObjectId(id)) } },
-      { $set: { isRead: true, readAt: new Date() } }
-    )
-
-    res.json({
-      message: 'Alerts marked as read',
-      modifiedCount: result.modifiedCount
+      message: 'Alert marked as resolved',
+      modifiedCount: updated
     })
   } catch (error) {
     res.status(500).json({ error: error.message })
@@ -1550,196 +1216,13 @@ app.patch('/api/alerts/read-multiple', async (req, res) => {
 // Delete alert
 app.delete('/api/alerts/:alertId', async (req, res) => {
   try {
-    if (!allocationAlertsCollection) {
-      return res.status(503).json({ error: 'Database not connected' })
-    }
-
-    const { ObjectId } = await import('mongodb')
-
-    const result = await allocationAlertsCollection.deleteOne(
-      { _id: new ObjectId(req.params.alertId) }
-    )
+    const deleted = await AllocationAlert.destroy({
+      where: { id: req.params.alertId }
+    })
 
     res.json({
       message: 'Alert deleted successfully',
-      deletedCount: result.deletedCount
-    })
-  } catch (error) {
-    res.status(500).json({ error: error.message })
-  }
-})
-
-// Clear old alerts (older than 30 days)
-app.delete('/api/alerts/clear-old', async (req, res) => {
-  try {
-    if (!allocationAlertsCollection) {
-      return res.status(503).json({ error: 'Database not connected' })
-    }
-
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-
-    const result = await allocationAlertsCollection.deleteMany({
-      createdAt: { $lt: thirtyDaysAgo },
-      isRead: true
-    })
-
-    res.json({
-      message: 'Old alerts cleared',
-      deletedCount: result.deletedCount
-    })
-  } catch (error) {
-    res.status(500).json({ error: error.message })
-  }
-})
-
-// Generate expiring permit alerts
-app.post('/api/alerts/generate/permits-expiring', async (req, res) => {
-  try {
-    if (!guardFirearmPermitsCollection || !allocationAlertsCollection) {
-      return res.status(503).json({ error: 'Database not connected' })
-    }
-
-    const thirtyDaysFromNow = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-    const today = new Date()
-
-    const expiringPermits = await guardFirearmPermitsCollection
-      .find({
-        expiryDate: { $gte: today, $lte: thirtyDaysFromNow },
-        alertSent: false
-      })
-      .toArray()
-
-    let alertsCreated = 0
-
-    for (const permit of expiringPermits) {
-      const daysUntilExpiry = Math.ceil(
-        (permit.expiryDate - today) / (1000 * 60 * 60 * 24)
-      )
-
-      await allocationAlertsCollection.insertOne({
-        type: 'permit_expiry',
-        title: `Permit Expiring Soon`,
-        message: `Firearm permit for guard expires in ${daysUntilExpiry} days`,
-        guardId: permit.guardId,
-        firearmId: permit.firearmId,
-        priority: daysUntilExpiry <= 7 ? 'critical' : 'high',
-        relatedId: permit._id,
-        isRead: false,
-        createdAt: new Date(),
-        createdBy: 'system'
-      })
-
-      // Mark permit as alerted
-      await guardFirearmPermitsCollection.updateOne(
-        { _id: permit._id },
-        { $set: { alertSent: true } }
-      )
-
-      alertsCreated++
-    }
-
-    res.json({
-      message: 'Permit expiry alerts generated',
-      alertsCreated,
-      expiringPermitCount: expiringPermits.length
-    })
-  } catch (error) {
-    res.status(500).json({ error: error.message })
-  }
-})
-
-// Generate maintenance due alerts
-app.post('/api/alerts/generate/maintenance-due', async (req, res) => {
-  try {
-    if (!firearmsCollection || !firearmMaintenanceCollection || !allocationAlertsCollection) {
-      return res.status(503).json({ error: 'Database not connected' })
-    }
-
-    const sixtyDaysAgo = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000)
-
-    const firearmsNeedingMaintenance = await firearmsCollection
-      .find({
-        $or: [
-          { lastMaintenanceDate: { $lt: sixtyDaysAgo } },
-          { lastMaintenanceDate: { $exists: false } }
-        ]
-      })
-      .toArray()
-
-    let alertsCreated = 0
-
-    for (const firearm of firearmsNeedingMaintenance) {
-      // Check if alert already exists for this firearm
-      const existingAlert = await allocationAlertsCollection.findOne({
-        type: 'maintenance_due',
-        firearmId: firearm._id,
-        isRead: false
-      })
-
-      if (!existingAlert) {
-        await allocationAlertsCollection.insertOne({
-          type: 'maintenance_due',
-          title: `Firearm Maintenance Due`,
-          message: `Firearm ${firearm.serialNumber} is due for maintenance`,
-          firearmId: firearm._id,
-          priority: 'high',
-          isRead: false,
-          createdAt: new Date(),
-          createdBy: 'system'
-        })
-        alertsCreated++
-      }
-    }
-
-    res.json({
-      message: 'Maintenance due alerts generated',
-      alertsCreated,
-      firearmsNeedingMaintenance: firearmsNeedingMaintenance.length
-    })
-  } catch (error) {
-    res.status(500).json({ error: error.message })
-  }
-})
-
-// Generate low stock alerts
-app.post('/api/alerts/generate/low-stock', async (req, res) => {
-  try {
-    if (!firearmsCollection || !allocationAlertsCollection) {
-      return res.status(503).json({ error: 'Database not connected' })
-    }
-
-    const lowStockFirearms = await firearmsCollection
-      .find({ quantity: { $lte: 3 } })
-      .toArray()
-
-    let alertsCreated = 0
-
-    for (const firearm of lowStockFirearms) {
-      const existingAlert = await allocationAlertsCollection.findOne({
-        type: 'low_stock',
-        firearmId: firearm._id,
-        isRead: false
-      })
-
-      if (!existingAlert) {
-        await allocationAlertsCollection.insertOne({
-          type: 'low_stock',
-          title: `Low Firearm Stock`,
-          message: `Only ${firearm.quantity} units of ${firearm.model} remaining`,
-          firearmId: firearm._id,
-          priority: firearm.quantity <= 1 ? 'critical' : 'medium',
-          isRead: false,
-          createdAt: new Date(),
-          createdBy: 'system'
-        })
-        alertsCreated++
-      }
-    }
-
-    res.json({
-      message: 'Low stock alerts generated',
-      alertsCreated,
-      lowStockCount: lowStockFirearms.length
+      deletedCount: deleted
     })
   } catch (error) {
     res.status(500).json({ error: error.message })
@@ -1749,13 +1232,12 @@ app.post('/api/alerts/generate/low-stock', async (req, res) => {
 // Mount Guard Replacement System Routes
 app.use('/api', guardReplacementRoutes)
 
-// Connect to DB and start server
-connectDB().then(() => {
+// Initialize and start server
+initializeDB().then(() => {
   app.listen(PORT, () => {
-    if (db) {
-      console.log(`✓ Server running on http://localhost:${PORT} (Database connected)`)
-    } else {
-      console.log(`✓ Server running on http://localhost:${PORT} (Offline mode)`)
-    }
+    console.log(`✓ Server running on http://localhost:${PORT}`)
   })
+}).catch(err => {
+  console.error('Failed to initialize database:', err.message)
+  process.exit(1)
 })

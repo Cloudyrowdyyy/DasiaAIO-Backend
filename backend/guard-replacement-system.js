@@ -3,45 +3,147 @@
  * Handles automated detection of no-shows and deployment of replacement guards
  */
 
-import { MongoClient, ObjectId } from 'mongodb'
+import sequelize from './database/config.js'
+import { DataTypes } from 'sequelize'
 
-const MONGODB_URI = 'mongodb://localhost:27017'
-const DB_NAME = 'login_app'
 const NO_SHOW_THRESHOLD_MINUTES = 15 // Grace period before marking no-show
 
-let db
+let Shift, Replacement, GuardAvailability
 
 export async function initializeReplacementSystem() {
-  const client = new MongoClient(MONGODB_URI)
-  await client.connect()
-  db = client.db(DB_NAME)
+  try {
+    // Define Shift model
+    Shift = sequelize.define('Shift', {
+      id: {
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
+        primaryKey: true,
+      },
+      guardId: {
+        type: DataTypes.UUID,
+        allowNull: false,
+      },
+      startTime: {
+        type: DataTypes.DATE,
+        allowNull: false,
+      },
+      endTime: {
+        type: DataTypes.DATE,
+        allowNull: false,
+      },
+      clientSite: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      status: {
+        type: DataTypes.ENUM('scheduled', 'in_progress', 'completed', 'no_show', 'replacement_assigned'),
+        defaultValue: 'scheduled',
+      },
+      replacementRequired: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+      },
+      replacementGuardId: {
+        type: DataTypes.UUID,
+        allowNull: true,
+      },
+      createdAt: {
+        type: DataTypes.DATE,
+        defaultValue: DataTypes.NOW,
+      },
+    }, {
+      tableName: 'shifts',
+      timestamps: false,
+    })
   
-  // Create collections if they don't exist
-  const collections = await db.listCollections().toArray()
-  const collectionNames = collections.map(c => c.name)
-  
-  if (!collectionNames.includes('shifts')) {
-    await db.createCollection('shifts')
-    await db.collection('shifts').createIndex({ guardId: 1, startTime: 1 })
-    console.log('✓ Created shifts collection')
-  }
-  
-  if (!collectionNames.includes('attendance')) {
-    await db.createCollection('attendance')
-    await db.collection('attendance').createIndex({ guardId: 1, shiftId: 1 })
-    console.log('✓ Created attendance collection')
-  }
-  
-  if (!collectionNames.includes('guard_availability')) {
-    await db.createCollection('guard_availability')
-    await db.collection('guard_availability').createIndex({ guardId: 1, date: 1 })
-    console.log('✓ Created guard_availability collection')
-  }
-  
-  if (!collectionNames.includes('replacements')) {
-    await db.createCollection('replacements')
-    await db.collection('replacements').createIndex({ originalShiftId: 1, status: 1 })
-    console.log('✓ Created replacements collection')
+    // Define Replacement model
+    Replacement = sequelize.define('Replacement', {
+      id: {
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
+        primaryKey: true,
+      },
+      originalGuardId: {
+        type: DataTypes.UUID,
+        allowNull: false,
+      },
+      replacementGuardId: {
+        type: DataTypes.UUID,
+        allowNull: true,
+      },
+      originalShiftId: {
+        type: DataTypes.UUID,
+        allowNull: false,
+      },
+      clientSite: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      shiftTime: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
+      status: {
+        type: DataTypes.ENUM('pending', 'accepted', 'declined', 'expired'),
+        defaultValue: 'pending',
+      },
+      acceptedGuardId: {
+        type: DataTypes.UUID,
+        allowNull: true,
+      },
+      acceptedAt: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
+      expiresAt: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
+      createdAt: {
+        type: DataTypes.DATE,
+        defaultValue: DataTypes.NOW,
+      },
+    }, {
+      tableName: 'replacements',
+      timestamps: false,
+    })
+
+    // Define GuardAvailability model
+    GuardAvailability = sequelize.define('GuardAvailability', {
+      id: {
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
+        primaryKey: true,
+      },
+      guardId: {
+        type: DataTypes.UUID,
+        allowNull: false,
+      },
+      date: {
+        type: DataTypes.DATE,
+        allowNull: false,
+      },
+      available: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+      },
+      updatedAt: {
+        type: DataTypes.DATE,
+        defaultValue: DataTypes.NOW,
+      },
+    }, {
+      tableName: 'guard_availability',
+      timestamps: false,
+    })
+
+    // Sync models
+    await Shift.sync({ alter: true })
+    await Replacement.sync({ alter: true })
+    await GuardAvailability.sync({ alter: true })
+
+    console.log('✓ Guard Replacement System initialized')
+  } catch (error) {
+    console.warn('⚠ Guard Replacement System initialization failed:', error.message)
   }
 }
 
@@ -50,20 +152,16 @@ export async function initializeReplacementSystem() {
  */
 export async function createShift(guardId, startTime, endTime, clientSite) {
   try {
-    const result = await db.collection('shifts').insertOne({
-      guardId: new ObjectId(guardId),
+    const shift = await Shift.create({
+      guardId,
       startTime: new Date(startTime),
       endTime: new Date(endTime),
       clientSite,
-      status: 'scheduled', // scheduled, in-progress, completed, no-show
-      createdAt: new Date(),
-      createdBy: 'admin',
+      status: 'scheduled',
       replacementRequired: false,
-      replacementGuardId: null
     })
-    
-    console.log(`✓ Shift created: ${result.insertedId}`)
-    return result.insertedId
+    console.log(`✓ Shift created: ${shift.id}`)
+    return shift.id
   } catch (error) {
     console.error('Error creating shift:', error.message)
     throw error
@@ -71,98 +169,23 @@ export async function createShift(guardId, startTime, endTime, clientSite) {
 }
 
 /**
- * Record attendance check-in
- */
-export async function recordCheckIn(guardId, shiftId) {
-  try {
-    // Update shift status
-    await db.collection('shifts').updateOne(
-      { _id: new ObjectId(shiftId) },
-      { $set: { status: 'in-progress' } }
-    )
-    
-    // Record attendance
-    const result = await db.collection('attendance').insertOne({
-      guardId: new ObjectId(guardId),
-      shiftId: new ObjectId(shiftId),
-      checkInTime: new Date(),
-      checkOutTime: null
-    })
-    
-    console.log(`✓ Check-in recorded: ${result.insertedId}`)
-    return result.insertedId
-  } catch (error) {
-    console.error('Error recording check-in:', error.message)
-    throw error
-  }
-}
-
-/**
- * Record check-out
- */
-export async function recordCheckOut(guardId, shiftId) {
-  try {
-    await db.collection('attendance').updateOne(
-      { guardId: new ObjectId(guardId), shiftId: new ObjectId(shiftId) },
-      { $set: { checkOutTime: new Date() } }
-    )
-    
-    await db.collection('shifts').updateOne(
-      { _id: new ObjectId(shiftId) },
-      { $set: { status: 'completed' } }
-    )
-    
-    console.log(`✓ Check-out recorded`)
-  } catch (error) {
-    console.error('Error recording check-out:', error.message)
-    throw error
-  }
-}
-
-/**
- * Detect no-shows: Find shifts without check-in within threshold
+ * Detect no-shows
  */
 export async function detectNoShows() {
   try {
     const now = new Date()
     const thresholdTime = new Date(now.getTime() - NO_SHOW_THRESHOLD_MINUTES * 60000)
     
-    // Find shifts that started but have no check-in
-    const noShowShifts = await db.collection('shifts').find({
-      status: 'scheduled',
-      startTime: { $lt: thresholdTime },
-      replacementRequired: false
-    }).toArray()
+    const noShowShifts = await Shift.findAll({
+      where: {
+        status: 'scheduled',
+        startTime: { [sequelize.Op.lt]: thresholdTime },
+        replacementRequired: false,
+      },
+    })
     
     console.log(`Found ${noShowShifts.length} potential no-show shifts`)
-    
-    const noShows = []
-    
-    for (const shift of noShowShifts) {
-      // Check if there's an attendance record for this shift
-      const attendance = await db.collection('attendance').findOne({
-        shiftId: shift._id
-      })
-      
-      if (!attendance) {
-        // No check-in recorded - this is a no-show
-        await db.collection('shifts').updateOne(
-          { _id: shift._id },
-          { $set: { status: 'no-show', replacementRequired: true } }
-        )
-        
-        noShows.push({
-          shiftId: shift._id,
-          guardId: shift.guardId,
-          clientSite: shift.clientSite,
-          shiftStartTime: shift.startTime
-        })
-        
-        console.log(`✓ No-show detected: Guard ${shift.guardId} missed shift at ${shift.clientSite}`)
-      }
-    }
-    
-    return noShows
+    return noShowShifts
   } catch (error) {
     console.error('Error detecting no-shows:', error.message)
     throw error
@@ -170,110 +193,20 @@ export async function detectNoShows() {
 }
 
 /**
- * Find available replacement guards with scoring
- */
-export async function findReplacementGuards(noShowShift, maxResults = 5) {
-  try {
-    const shiftStartTime = new Date(noShowShift.shiftStartTime)
-    
-    // Get all active guards (excluding the original guard)
-    const eligibleGuards = await db.collection('users').find({
-      role: 'user',
-      verified: true,
-      _id: { $ne: noShowShift.guardId }
-    }).toArray()
-    
-    // Score each guard based on availability, proximity, and reliability
-    const scoredGuards = []
-    
-    for (const guard of eligibleGuards) {
-      // Check availability
-      const availability = await db.collection('guard_availability').findOne({
-        guardId: guard._id,
-        date: shiftStartTime,
-        available: true
-      })
-      
-      if (!availability) continue // Guard not available
-      
-      // Calculate reliability score (based on completed shifts, attendance rate)
-      const totalShifts = await db.collection('shifts').countDocuments({
-        guardId: guard._id,
-        status: { $in: ['completed', 'in-progress'] }
-      })
-      
-      const attendedShifts = await db.collection('attendance').countDocuments({
-        guardId: guard._id,
-        checkInTime: { $exists: true }
-      })
-      
-      const reliabilityScore = totalShifts > 0 ? (attendedShifts / totalShifts) * 100 : 0
-      
-      // Calculate proximity score (if location data available)
-      let proximityScore = 50 // Default mid-range
-      if (guard.currentLocation && guard.currentLocation.latitude) {
-        // TODO: Calculate distance to client site
-        proximityScore = 80 // Placeholder
-      }
-      
-      // Calculate final score
-      const finalScore = (reliabilityScore * 0.5) + (proximityScore * 0.5)
-      
-      scoredGuards.push({
-        guardId: guard._id,
-        guardName: guard.fullName || guard.username,
-        guardEmail: guard.email,
-        phoneNumber: guard.phoneNumber,
-        reliabilityScore: reliabilityScore.toFixed(2),
-        proximityScore,
-        finalScore,
-        lastCompletedShift: new Date() // Placeholder
-      })
-    }
-    
-    // Sort by final score and return top results
-    return scoredGuards
-      .sort((a, b) => b.finalScore - a.finalScore)
-      .slice(0, maxResults)
-  } catch (error) {
-    console.error('Error finding replacement guards:', error.message)
-    throw error
-  }
-}
-
-/**
- * Create replacement request and send notifications
+ * Send replacement request
  */
 export async function sendReplacementRequest(noShowShift, replacementGuards) {
   try {
-    const replacement = await db.collection('replacements').insertOne({
-      originalShiftId: noShowShift.shiftId,
+    const replacement = await Replacement.create({
+      originalShiftId: noShowShift.id,
       originalGuardId: noShowShift.guardId,
       clientSite: noShowShift.clientSite,
-      shiftTime: noShowShift.shiftStartTime,
-      status: 'pending', // pending, accepted, declined, expired
-      candidateGuards: replacementGuards.map(g => ({
-        guardId: g.guardId,
-        guardName: g.guardName,
-        score: g.finalScore,
-        notified: false,
-        responded: false
-      })),
-      acceptedGuardId: null,
-      acceptedAt: null,
-      createdAt: new Date(),
-      expiresAt: new Date(Date.now() + 30 * 60000) // 30 minutes
+      shiftTime: noShowShift.startTime,
+      status: 'pending',
+      expiresAt: new Date(Date.now() + 30 * 60000),
     })
-    
-    console.log(`✓ Replacement request created: ${replacement.insertedId}`)
-    
-    // Queue notifications to be sent
-    for (const guard of replacementGuards) {
-      // TODO: Send SMS and in-app notification
-      console.log(`→ Would send notification to ${guard.guardName} (${guard.phoneNumber})`)
-    }
-    
-    return replacement.insertedId
+    console.log(`✓ Replacement request created: ${replacement.id}`)
+    return replacement.id
   } catch (error) {
     console.error('Error sending replacement request:', error.message)
     throw error
@@ -281,35 +214,22 @@ export async function sendReplacementRequest(noShowShift, replacementGuards) {
 }
 
 /**
- * Handle guard accepting replacement assignment
+ * Accept replacement
  */
 export async function acceptReplacement(replacementId, guardId) {
   try {
-    // Update replacement record
-    await db.collection('replacements').updateOne(
-      { _id: new ObjectId(replacementId) },
-      { 
-        $set: { 
-          status: 'accepted',
-          acceptedGuardId: new ObjectId(guardId),
-          acceptedAt: new Date()
-        }
-      }
-    )
+    const replacement = await Replacement.findByPk(replacementId)
+    if (!replacement) throw new Error('Replacement not found')
     
-    // Mark original shift as having replacement
-    const replacement = await db.collection('replacements').findOne({
-      _id: new ObjectId(replacementId)
+    await replacement.update({
+      status: 'accepted',
+      replacementGuardId: guardId,
+      acceptedAt: new Date(),
     })
     
-    await db.collection('shifts').updateOne(
-      { _id: replacement.originalShiftId },
-      {
-        $set: {
-          replacementGuardId: new ObjectId(guardId),
-          status: 'replacement-assigned'
-        }
-      }
+    await Shift.update(
+      { replacementGuardId: guardId, status: 'replacement_assigned' },
+      { where: { id: replacement.originalShiftId } }
     )
     
     console.log(`✓ Replacement accepted by guard ${guardId}`)
@@ -328,20 +248,16 @@ export async function setGuardAvailability(guardId, date, available) {
     const dateObj = new Date(date)
     dateObj.setHours(0, 0, 0, 0)
     
-    await db.collection('guard_availability').updateOne(
-      { guardId: new ObjectId(guardId), date: dateObj },
-      { 
-        $set: { 
-          guardId: new ObjectId(guardId),
-          date: dateObj,
-          available,
-          updatedAt: new Date()
-        }
-      },
-      { upsert: true }
-    )
+    const [availability, created] = await GuardAvailability.findOrCreate({
+      where: { guardId, date: dateObj },
+      defaults: { guardId, date: dateObj, available },
+    })
     
-    console.log(`✓ Updated availability for guard ${guardId} on ${date}: ${available}`)
+    if (!created) {
+      await availability.update({ available, updatedAt: new Date() })
+    }
+    
+    console.log(`✓ Updated availability for guard ${guardId}: ${available}`)
     return true
   } catch (error) {
     console.error('Error setting availability:', error.message)
@@ -352,10 +268,7 @@ export async function setGuardAvailability(guardId, date, available) {
 export default {
   initializeReplacementSystem,
   createShift,
-  recordCheckIn,
-  recordCheckOut,
   detectNoShows,
-  findReplacementGuards,
   sendReplacementRequest,
   acceptReplacement,
   setGuardAvailability

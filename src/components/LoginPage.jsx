@@ -238,16 +238,29 @@ export default function LoginPage({ onLogin }) {
 
   return (
     <div className="login-container">
-      <div className="login-box">
+      <div className="page-header">
         <Logo />
-        {requiresVerification ? (
-          <>
-            <h1>Verify Your Email</h1>
-            <p className="verification-subtitle">Enter the 6-digit code sent to {verificationEmail}</p>
-            <form onSubmit={handleSubmit}>
-              <div className="form-group">
-                <label htmlFor="code">Confirmation Code</label>
-                <input
+        <span className="agency-name">Davao Security & Investigation Agency Inc.</span>
+      </div>
+      <div className="login-wrapper">
+        <div className="login-left">
+          <div className="login-content">
+            {!requiresVerification && !isRegistering && (
+              <div className="welcome-section">
+                <h1>Welcome Back!</h1>
+                <p>Please enter your details</p>
+              </div>
+            )}
+            {requiresVerification ? (
+              <>
+                <div className="verify-header">
+                  <h1>Verify Your Email</h1>
+                  <p className="verification-subtitle">Enter the 6-digit code sent to {verificationEmail}</p>
+                </div>
+                <form onSubmit={handleSubmit} className="login-form">
+                  <div className="form-group">
+                    <label htmlFor="code">Confirmation Code</label>
+                    <input
                   id="code"
                   type="text"
                   value={verificationCode}
@@ -311,11 +324,16 @@ export default function LoginPage({ onLogin }) {
               </div>
             </form>
           </>
-        ) : (
-          <>
-            <h1>{isRegistering ? 'Register' : 'Login'}</h1>
-        <form onSubmit={handleSubmit}>
-          {isRegistering && (
+            ) : (
+              <>
+                {isRegistering && (
+                  <div className="register-header">
+                    <h1>Create Account</h1>
+                    <p>Fill in your details to get started</p>
+                  </div>
+                )}
+                <form onSubmit={handleSubmit} className="login-form">
+                  {isRegistering && (
             <div className="form-group">
               <label htmlFor="username">Username</label>
               <input
@@ -483,6 +501,12 @@ export default function LoginPage({ onLogin }) {
         </div>
           </>
         )}
+        </div>
+        </div>
+
+        <div className="login-right">
+          <img src="/images/security-bg.png" alt="Security" className="security-illustration" />
+        </div>
       </div>
     </div>
   )
