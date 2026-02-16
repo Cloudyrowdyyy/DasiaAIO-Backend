@@ -4,7 +4,7 @@
  */
 
 import express from 'express'
-import replacementSystem from './guard-replacement-system.js'
+import replacementSystem from '../guard-replacement-system.js'
 
 const router = express.Router()
 
