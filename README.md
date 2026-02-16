@@ -1,4 +1,4 @@
-# Davao Security & Investigation Agency - Firearm Management System
+# Davao Security & Investigation Agency - AIO Management System
 
 A comprehensive web and desktop application for managing firearm inventory, allocation, maintenance, and guard scheduling with role-based access control.
 
