@@ -197,7 +197,6 @@ Access the application at `http://localhost:5173/`
 ## Default Test Accounts
 
 For development testing, use:
-- **Admin**: dkgagaamain@gmail.com / december262001
 - **Test User**: test@gmail.com / test123
 
 ## Database Models
