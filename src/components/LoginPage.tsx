@@ -199,7 +199,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
       } else {
         // Login
         if (!identifier || !password) {
-          setError('Email, phone number, and password are required')
+          setError('Email, username, phone number, and password are required')
           setIsLoading(false)
           return
         }
@@ -427,13 +427,13 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
 
                   {!isRegistering && (
                     <div className="form-group">
-                      <label htmlFor="identifier">Email or Phone Number</label>
+                      <label htmlFor="identifier">Email, Username, or Phone Number</label>
                       <input
                         id="identifier"
                         type="text"
                         value={identifier}
                         onChange={(e: ChangeEvent<HTMLInputElement>) => setIdentifier(e.target.value)}
-                        placeholder="Enter your email or phone number"
+                        placeholder="Enter your email, username, or phone number"
                         disabled={isLoading}
                       />
                     </div>

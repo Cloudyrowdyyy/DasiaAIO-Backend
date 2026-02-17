@@ -228,14 +228,14 @@ pub async fn login(
 ) -> AppResult<Json<serde_json::Value>> {
     if payload.identifier.is_empty() || payload.password.is_empty() {
         return Err(AppError::BadRequest(
-            "Email/phone and password are required".to_string()
+            "Email, username, phone number, and password are required".to_string()
         ));
     }
 
-    // Find user by email or phone
+    // Find user by email, username, or phone
     let user = sqlx::query(
         r#"SELECT id, email, username, password, role, full_name, phone_number, verified FROM users 
-           WHERE email = $1 OR phone_number = $1"#
+           WHERE email = $1 OR username = $1 OR phone_number = $1"#
     )
     .bind(&payload.identifier)
     .fetch_optional(db.as_ref())
