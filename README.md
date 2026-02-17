@@ -1,291 +1,242 @@
-# Guard Firearm Management System
+# Davao Security & Investigation Agency - AIO Management System
 
-A comprehensive full-stack application for managing firearm inventory, allocation, maintenance, and guard scheduling with role-based access control.
+A comprehensive web and desktop application for managing firearm inventory, allocation, maintenance, and guard scheduling with role-based access control.
 
-## 🎯 Overview
-
-This system provides a professional solution for security agencies to manage guard firearm operations, including real-time inventory tracking, automated shift management, and comprehensive audit trails.
-
-## ✨ Features
+## Features
 
 ### Core Functionality
 - **User Authentication**: Email-based registration and login with email verification
-- **Role-Based Access Control**: Admin and Guard roles with specialized dashboards
+- **Role-Based Access Control**: Superadmin, Admin, and Guard roles with specialized dashboards
 - **Firearm Inventory Management**: Add, edit, track firearm details, serial numbers, and status
 - **Firearm Allocation**: Issue and return firearms with real-time allocation tracking
 - **Guard Firearm Permits**: Manage and verify guard firearm permits
-- **Firearm Maintenance**: Track firearm maintenance history and schedule maintenance
-- **Attendance Tracking**: Monitor guard attendance with check-in/check-out
-- **Guard Replacement System**: Automated shift management and replacement requests
-- **Alerts Center**: Real-time notifications for critical events
+- **Maintenance Scheduling**: Track firearm maintenance history and schedule maintenance tasks
+- **Attendance Tracking**: Monitor guard attendance and schedules
+- **Performance Analytics**: View guard performance metrics and statistics
+- **Guard Replacement System**: Automated shift management and guard replacement notifications
+- **Alerts Center**: Centralized notification system for critical events
 
 ### User Experience
-- **Professional Dashboard**: Role-specific admin and guard dashboards
+- **Two-Column Login**: Professional login interface with security branding
 - **Responsive Design**: Works on desktop and web browsers
 - **Real-Time Updates**: Immediate feedback on actions and status changes
-- **Intuitive Interface**: Simple and efficient user workflows
+- **Role-Specific Dashboards**: Customized interfaces for different user roles
 
-## 🛠️ Technology Stack
+## Technology Stack
 
-### Frontend
-- **Framework**: React 18.x
-- **Build Tool**: Vite 7.3.1
-- **Language**: TypeScript 5.x
-- **Styling**: CSS3
+- **Frontend**: React 18.2 + Vite 7.3.1
+- **Backend**: Node.js + Express.js
+- **Database**: PostgreSQL with Sequelize ORM
+- **Security**: bcryptjs password hashing, email verification
+- **Email Service**: Nodemailer with Gmail SMTP
+- **Desktop**: Electron (optional)
+- **Styling**: CSS with responsive design
 
-### Backend
-- **Framework**: Rust with Axum 0.7 web framework
-- **Runtime**: Tokio async runtime
-- **ORM**: SQLx 0.7 (runtime type checking)
-- **Authentication**: bcrypt password hashing + email verification
-- **Deployment**: Docker containerization
-
-### Database
-- **System**: PostgreSQL 15
-- **Deployment**: Docker container
-- **Migrations**: Automatic on startup
-
-### Infrastructure
-- **Containerization**: Docker & Docker Compose
-- **Port Configuration**:
-  - Frontend: `http://localhost:5173` (dev)
-  - Backend API: `http://localhost:5000`
-  - Database: `localhost:5432`
-
-## 📋 Installation & Setup
+## Installation & Setup
 
 ### Prerequisites
-- **Docker** and **Docker Compose**
-- Git
-- Node.js v18+ (for frontend development)
+- Node.js v18 or higher
+- PostgreSQL (v12 or higher)
+- npm or yarn
 
-### Quick Start with Docker
-
-1. **Clone the repository**
+### Backend Setup
 ```bash
-git clone <repository-url>
-cd "Capstone 1.0"
-```
-
-2. **Start all services**
-```bash
-cd backend-rust
-docker-compose up -d
-```
-
-This will automatically:
-- Start PostgreSQL database on port 5432
-- Build and start Rust backend on port 5000
-- Run database migrations
-- Initialize default configuration
-
-3. **Start frontend development server**
-```bash
-cd ../frontend
+cd backend
 npm install
+```
+
+Create `.env` file in `backend/` directory:
+```
+DB_NAME=login_app
+DB_USER=postgres
+DB_PASSWORD=your_password
+DB_HOST=localhost
+DB_PORT=5432
+PORT=5000
+GMAIL_USER=your_email@gmail.com
+GMAIL_PASS=your_app_password
+```
+
+### Frontend Setup
+```bash
+npm install
+```
+
+### Running the Application
+
+**Terminal 1 - Backend Server:**
+```bash
+cd backend
 npm run dev
 ```
+Backend runs on http://localhost:5000
 
-The frontend will be available at `http://localhost:5173`
-
-### Verify Setup
-
-**Check backend health:**
+**Terminal 2 - Frontend Server:**
 ```bash
-curl http://localhost:5000/api/health
+npm run dev
 ```
+Frontend runs on http://localhost:5173
 
-Expected response:
-```json
-{"status":"ok"}
-```
+Access the application at `http://localhost:5173/`
 
-## 🔐 Default Admin Account
-
-Use these credentials to log in as admin:
-- **Email**: dkgagaamain@gmail.com
-- **Password**: december262001
-
-## 📁 Project Structure
+## Project Structure
 
 ```
-├── backend-rust/              # Rust backend
-│   ├── src/
-│   │   ├── main.rs           # Router and app entry point
-│   │   ├── handlers/         # API endpoint handlers
-│   │   ├── models.rs         # Data structures
-│   │   ├── db.rs             # Database setup
-│   │   ├── config.rs         # Configuration
-│   │   └── error.rs          # Error handling
-│   ├── Cargo.toml            # Rust dependencies
-│   ├── Dockerfile            # Docker build config
-│   └── docker-compose.yml    # Service orchestration
-│
-├── frontend/                  # React TypeScript frontend
-│   ├── src/
-│   │   ├── components/       # React components
-│   │   ├── styles/           # CSS styling
-│   │   └── main.tsx          # Entry point
-│   ├── package.json          # Node dependencies
-│   └── tsconfig.json         # TypeScript config
-│
-└── README.md                 # This file
+├── src/                           # React frontend
+│   ├── components/
+│   │   ├── LoginPage.jsx
+│   │   ├── AdminDashboard.jsx
+│   │   ├── GuardDashboard.jsx
+│   │   ├── SuperadminDashboard.jsx
+│   │   ├── FirearmInventory.jsx
+│   │   ├── FirearmAllocation.jsx
+│   │   ├── GuardFirearmPermits.jsx
+│   │   └── FirearmMaintenance.jsx
+│   └── styles/
+├── backend/                       # Express.js API
+│   ├── server.js
+│   ├── database/
+│   │   └── config.js
+│   ├── models/
+│   │   ├── User.js
+│   │   ├── Firearm.js
+│   │   ├── FirearmAllocation.js
+│   │   └── ...
+│   ├── routes/
+│   └── package.json
+├── public/
+│   └── images/
+├── package.json
+└── vite.config.js
 ```
 
-## 🚀 API Endpoints
+## API Endpoints
 
 ### Authentication
-- `POST /api/register` - Register new user (requires admin_code for admin role)
-- `POST /api/login` - User login
-- `POST /api/verify` - Verify email with confirmation code
-- `POST /api/resend-code` - Resend verification code
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/register` | Register new user |
+| POST | `/api/login` | Login user |
+| POST | `/api/verify` | Verify email |
+| POST | `/api/resend-code` | Resend verification code |
 
-### Users
-- `GET /api/users` - Get all users
-- `GET /api/user/:id` - Get user by ID
-- `PUT /api/user/:id` - Update user
-- `DELETE /api/user/:id` - Delete user
+### User Management
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/users` | Get all users |
+| GET | `/api/user/:id` | Get user by ID |
+| PUT | `/api/user/:id` | Update user info |
+| POST | `/api/user/:id/role` | Update user role |
 
-### Firearms
-- `POST /api/firearms` - Add new firearm
-- `GET /api/firearms` - Get all firearms
-- `GET /api/firearms/:id` - Get firearm by ID
-- `PUT /api/firearms/:id` - Update firearm
-- `DELETE /api/firearms/:id` - Delete firearm
+### Firearm Management
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/firearms` | Get all firearms |
+| POST | `/api/firearms` | Add new firearm |
+| PUT | `/api/firearms/:id` | Update firearm |
+| DELETE | `/api/firearms/:id` | Delete firearm |
 
-### Firearm Allocation
-- `POST /api/firearm-allocation/issue` - Issue firearm to guard
-- `POST /api/firearm-allocation/return` - Return firearm
-- `GET /api/guard-allocations/:guard_id` - Get guard's firearms
-- `GET /api/firearm-allocations/active` - Get active allocations
+### Allocation & Permits
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/allocations` | Get all allocations |
+| POST | `/api/allocations` | Create allocation |
+| PUT | `/api/allocations/:id` | Update allocation |
+| GET | `/api/permits` | Get all permits |
 
-### Guard Management
-- `POST /api/guard-replacement/shifts` - Create shift
-- `POST /api/guard-replacement/attendance/check-in` - Check in guard
-- `POST /api/guard-replacement/attendance/check-out` - Check out guard
-- `POST /api/guard-replacement/detect-no-shows` - Detect no-shows
-- `POST /api/guard-replacement/request-replacement` - Request replacement guard
-- `POST /api/guard-replacement/set-availability` - Set guard availability
+## Scope
 
-### Health Check
-- `GET /api/health` - API health status
+### What's Included
+- Complete user authentication system with email verification
+- Full firearm inventory management system
+- Firearm allocation tracking with return management
+- Guard permit management
+- Firearm maintenance tracking
+- Attendance management
+- Performance analytics dashboard
+- Guard replacement shift system
+- Role-based access control (3 roles)
+- Email notifications for critical events
+- Responsive web interface
 
-## 🔧 Environment Configuration
+### What's Not Included
+- Mobile app (web-responsive only)
+- SMS/WhatsApp integration
+- Integration with external security systems
+- Advanced audit logging
+- Multi-language support
+- Third-party payment systems
 
-Backend configuration via `backend-rust/.env`:
+## Limitations
 
-```env
-DATABASE_URL=postgresql://postgres:postgres@postgres:5432/guard_firearm_system
-SERVER_HOST=0.0.0.0
-SERVER_PORT=5000
-ADMIN_CODE=122601
-RUST_LOG=info
-```
+### Current Limitations
+- **Database**: Uses PostgreSQL (MongoDB version available but no longer maintained)
+- **Authentication**: Email-based only (no OAuth/SSO)
+- **Concurrency**: No real-time collaboration features
+- **File Storage**: No external storage (Cloud) integration
+- **Scalability**: Single-server deployment recommended for current setup
+- **Browser Support**: Modern browsers only (Chrome, Firefox, Edge)
+- **Offline Mode**: Web version requires internet connection
+- **User Capacity**: Tested for up to 1000 concurrent users
+- **Report Generation**: Limited to screen-based views (no PDF export initially)
+- **Firearm Images**: Metadata only, no actual image storage
 
-## 📝 Creating Admin Accounts
+### Known Issues
+- Large bulk operations (1000+ records) may take time
+- Email verification may take 1-2 minutes in some cases
+- Electron build requires Windows (native build required for macOS/Linux)
 
-To create a new admin account, use the registration endpoint with:
-```json
-{
-  "email": "admin@example.com",
-  "username": "admin_username",
-  "password": "secure_password",
-  "full_name": "Admin Name",
-  "phone_number": "phone_number",
-  "role": "admin",
-  "admin_code": "122601"
-}
-```
+## Security
 
-The `admin_code` is required and defaults to `122601`.
+- Passwords hashed with bcryptjs (salt rounds: 10)
+- Email verification required for new accounts
+- Role-based access control enforced on backend
+- CORS enabled for frontend communication
+- Environment variables for sensitive data
 
-## 🐳 Docker Commands
+## Default Test Accounts
 
-### View running containers
+For development testing, use:
+- **Test User**: test@gmail.com / test123
+
+## Database Models
+
+- **User**: Authentication and user information
+- **Verification**: Email verification codes
+- **Firearm**: Firearm inventory and details
+- **FirearmAllocation**: Allocation history and tracking
+- **GuardFirearmPermit**: Guard permit management
+- **FirearmMaintenance**: Maintenance schedules and history
+- **Attendance**: Guard attendance records
+- **Feedback**: User feedback and reports
+- **AllocationAlert**: Critical allocation alerts
+
+## Support & Troubleshooting
+
+### Common Issues
+
+**Port Already in Use:**
 ```bash
-cd backend-rust
-docker-compose ps
+# Kill process on port 5000
+Get-Process node | Stop-Process -Force
 ```
 
-### View backend logs
-```bash
-docker-compose logs backend --tail 50
-```
+**Database Connection Error:**
+- Verify PostgreSQL is running
+- Check `.env` credentials
+- Ensure database exists or auto-creation is enabled
 
-### Restart services
-```bash
-docker-compose restart
-```
+**Email Verification Not Working:**
+- Check Gmail credentials in `.env`
+- Enable "Less secure app access" or use App Password
+- Check email spam folder
 
-### Stop all services
-```bash
-docker-compose down
-```
+## Future Enhancements
 
-### Rebuild containers
-```bash
-docker-compose build --no-cache
-```
-
-## 📚 Database Schema
-
-The system automatically creates the following tables on startup:
-- `users` - User accounts and authentication
-- `verifications` - Email verification codes
-- `firearms` - Firearm inventory
-- `firearm_allocations` - Allocation tracking
-- `guard_firearm_permits` - Guard permits
-- `firearm_maintenance` - Maintenance records
-- `attendance` - Guard attendance logs
-- `shifts` - Shift schedules
-- `allocation_alerts` - System alerts
-
-## 🧪 Development
-
-### Frontend Development
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-### Backend Development
-```bash
-cd backend-rust
-cargo build
-cargo run
-```
-
-### Running Tests
-```bash
-# Backend
-cargo test
-
-# Frontend
-npm test
-```
-
-## 🐛 Troubleshooting
-
-### Backend Connection Error
-1. Verify PostgreSQL is running: `docker-compose ps`
-2. Check logs: `docker-compose logs postgres`
-3. Restart services: `docker-compose restart`
-
-### Frontend Can't Connect to Backend
-1. Verify backend is running: `curl http://localhost:5000/api/health`
-2. Check CORS configuration in backend
-3. Verify correct port (5000) in frontend API calls
-
-### Database Migration Issues
-1. Check backend logs: `docker-compose logs backend`
-2. Verify database credentials in `.env`
-3. Reset database: `docker-compose down -v && docker-compose up -d`
-
-## 📄 License
-
-This project is confidential and for authorized use only.
-
-## 👥 Support
-
-For issues or questions, please contact the development team.
+- Mobile app (React Native)
+- Real-time notifications (WebSocket)
+- PDF report generation
+- Advanced analytics and dashboards
+- Integration with GPS tracking
+- Multi-branch support
+- Blockchain for compliance tracking

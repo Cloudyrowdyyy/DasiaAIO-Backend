@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import LoginPage from './components/LoginPage'
+import AdminDashboard from './components/AdminDashboard'
 import SuperadminDashboard from './components/SuperadminDashboard'
 import UserDashboard from './components/UserDashboard'
 import PerformanceDashboard from './components/PerformanceDashboard'
@@ -9,31 +10,14 @@ import GuardFirearmPermits from './components/GuardFirearmPermits'
 import FirearmMaintenance from './components/FirearmMaintenance'
 import './App.css'
 
-export interface User {
-  id: string
-  email: string
-  username: string
-  role: 'admin' | 'superadmin' | 'user' | 'guard'
-  [key: string]: any
-}
-
 function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false)
-  const [user, setUser] = useState<User | null>(null)
-  const [activeView, setActiveView] = useState<string>('users')
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [user, setUser] = useState(null)
+  const [activeView, setActiveView] = useState('users') // 'users', 'performance', 'firearms', 'allocation', 'permits', 'maintenance'
 
-  const handleLogin = (userData: User) => {
-    const validRoles: Array<'admin' | 'superadmin' | 'user' | 'guard'> = ['admin', 'superadmin', 'user', 'guard']
-    if (!validRoles.includes(userData.role as 'admin' | 'superadmin' | 'user' | 'guard')) {
-      console.error('Invalid role:', userData.role)
-      return
-    }
-    const typedUser: User = {
-      ...userData,
-      role: userData.role as 'admin' | 'superadmin' | 'user' | 'guard'
-    }
-    console.log('Login successful:', typedUser)
-    setUser(typedUser)
+  const handleLogin = (userData) => {
+    console.log('Login successful:', userData)
+    setUser(userData)
     setIsLoggedIn(true)
     setActiveView('users')
   }
@@ -64,7 +48,7 @@ function App() {
         ) : (
           <SuperadminDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} />
         )
-      ) : user?.role === 'superadmin' ? (
+      ) : user?.role === 'admin' ? (
         activeView === 'performance' ? (
           <PerformanceDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} />
         ) : activeView === 'firearms' ? (
@@ -76,11 +60,11 @@ function App() {
         ) : activeView === 'maintenance' ? (
           <FirearmMaintenance user={user} onLogout={handleLogout} onViewChange={setActiveView} />
         ) : (
-          <SuperadminDashboard user={user} onLogout={handleLogout} onViewChange={setActiveView} />
+          <AdminDashboard user={user} onLogout={handleLogout} />
         )
-      ) : user ? (
+      ) : (
         <UserDashboard user={user} onLogout={handleLogout} />
-      ) : null}
+      )}
     </div>
   )
 }

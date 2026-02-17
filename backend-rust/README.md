@@ -1,461 +1,156 @@
-# Guard Firearm Management System - Rust Backend
+# Prerequisites
+- Rust 1.70+ (install from https://rustup.rs/)
+- PostgreSQL 12+
+- Git
 
-High-performance REST API backend built with Rust, Axum, and PostgreSQL.
+# Setup Instructions
 
-## 🚀 Quick Start
-
-### Prerequisites
-- Docker & Docker Compose
-- Rust 1.70+ (for local development)
-
-### Using Docker (Recommended)
-
+## 1. Install Rust
+If you haven't already installed Rust, run:
 ```bash
-docker-compose up -d
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
 
-This will:
-1. Start PostgreSQL 15 database
-2. Build and run Rust backend
-3. Run migrations automatically
-4. Backend available at `http://localhost:5000`
-
-### Local Development
-
+## 2. Clone and Setup
 ```bash
-# Install dependencies
-cargo build
-
-# Run migrations
-sqlx migrate run
-
-# Start server
-cargo run
+cd backend-rust
+cp .env.example .env
+# Edit .env with your PostgreSQL connection string and Gmail credentials
 ```
 
-## 📋 Environment Variables
-
-Create `.env` file:
-
-```env
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/guard_firearm_system
-SERVER_HOST=0.0.0.0
-SERVER_PORT=5000
-ADMIN_CODE=122601
-RUST_LOG=info
+## 3. Database Setup
+Make sure PostgreSQL is running. Create a new database:
+```postgresql
+CREATE DATABASE guard_firearm_system;
 ```
 
-## 🏗️ Architecture
+Update the `DATABASE_URL` in your `.env` file with the correct PostgreSQL connection details.
 
-### Handler Structure
-- `auth.rs` - Authentication (register, login, verify)
-- `users.rs` - User CRUD operations
-- `firearms.rs` - Firearm inventory management
-- `firearm_allocation.rs` - Firearm allocation tracking
-- `guard_replacement.rs` - Shift and attendance management
-- `health.rs` - Health check endpoint
+## 4. Build and Run
 
-### Database Models
-- `users` - User accounts and roles
-- `verifications` - Email verification codes
-- `firearms` - Firearm inventory
-- `firearm_allocations` - Allocation history
-- `guard_firearm_permits` - Guard permits
-- `firearm_maintenance` - Maintenance records
-- `attendance` - Guard attendance logs
-- `shifts` - Shift schedules
-- `allocation_alerts` - Alert notifications
-
-## 📚 API Documentation
-
-### Authentication Endpoints
-
-**Register**
-```
-POST /api/register
-Content-Type: application/json
-
-{
-  "email": "user@example.com",
-  "username": "username",
-  "password": "password",
-  "full_name": "Full Name",
-  "phone_number": "123456789",
-  "role": "guard|admin",
-  "admin_code": "122601" (required for admin)
-}
-```
-
-**Login**
-```
-POST /api/login
-Content-Type: application/json
-
-{
-  "identifier": "email@example.com",
-  "password": "password"
-}
-```
-
-**Verify Email**
-```
-POST /api/verify
-Content-Type: application/json
-
-{
-  "email": "user@example.com",
-  "code": "123456"
-}
-```
-
-**Resend Verification Code**
-```
-POST /api/resend-code
-Content-Type: application/json
-
-{
-  "email": "user@example.com"
-}
-```
-
-### User Endpoints
-
-**Get All Users**
-```
-GET /api/users
-```
-
-**Get User by ID**
-```
-GET /api/user/:id
-```
-
-**Update User**
-```
-PUT /api/user/:id
-Content-Type: application/json
-
-{
-  "username": "new_username",
-  "full_name": "New Name",
-  "phone_number": "987654321"
-}
-```
-
-**Delete User**
-```
-DELETE /api/user/:id
-```
-
-### Firearm Endpoints
-
-**Add Firearm**
-```
-POST /api/firearms
-Content-Type: application/json
-
-{
-  "serial_number": "SN123456",
-  "model_name": "Model X",
-  "manufacturer": "Manufacturer",
-  "caliber": ".45",
-  "condition": "good",
-  "status": "available"
-}
-```
-
-**Get All Firearms**
-```
-GET /api/firearms
-```
-
-**Get Firearm by ID**
-```
-GET /api/firearms/:id
-```
-
-**Update Firearm**
-```
-PUT /api/firearms/:id
-Content-Type: application/json
-
-{
-  "status": "available|allocated|maintenance",
-  "condition": "good|fair|poor"
-}
-```
-
-**Delete Firearm**
-```
-DELETE /api/firearms/:id
-```
-
-### Firearm Allocation Endpoints
-
-**Issue Firearm**
-```
-POST /api/firearm-allocation/issue
-Content-Type: application/json
-
-{
-  "firearm_id": "uuid",
-  "guard_id": "uuid",
-  "issued_date": "2026-02-17",
-  "notes": "Optional notes"
-}
-```
-
-**Return Firearm**
-```
-POST /api/firearm-allocation/return
-Content-Type: application/json
-
-{
-  "allocation_id": "uuid",
-  "return_date": "2026-02-17",
-  "condition_on_return": "good",
-  "notes": "Optional notes"
-}
-```
-
-**Get Guard Allocations**
-```
-GET /api/guard-allocations/:guard_id
-```
-
-**Get Active Allocations**
-```
-GET /api/firearm-allocations/active
-```
-
-### Guard Management Endpoints
-
-**Create Shift**
-```
-POST /api/guard-replacement/shifts
-Content-Type: application/json
-
-{
-  "guard_id": "uuid",
-  "shift_date": "2026-02-17",
-  "shift_type": "morning|afternoon|night",
-  "location": "Location"
-}
-```
-
-**Check In Guard**
-```
-POST /api/guard-replacement/attendance/check-in
-Content-Type: application/json
-
-{
-  "guard_id": "uuid",
-  "shift_id": "uuid",
-  "check_in_time": "2026-02-17T08:00:00Z"
-}
-```
-
-**Check Out Guard**
-```
-POST /api/guard-replacement/attendance/check-out
-Content-Type: application/json
-
-{
-  "guard_id": "uuid",
-  "attendance_id": "uuid",
-  "check_out_time": "2026-02-17T16:00:00Z"
-}
-```
-
-**Detect No-Shows**
-```
-POST /api/guard-replacement/detect-no-shows
-Content-Type: application/json
-
-{
-  "shift_date": "2026-02-17"
-}
-```
-
-**Request Replacement**
-```
-POST /api/guard-replacement/request-replacement
-Content-Type: application/json
-
-{
-  "original_guard_id": "uuid",
-  "shift_id": "uuid",
-  "reason": "Reason for replacement"
-}
-```
-
-**Set Availability**
-```
-POST /api/guard-replacement/set-availability
-Content-Type: application/json
-
-{
-  "guard_id": "uuid",
-  "available": true,
-  "available_from": "2026-02-18",
-  "available_until": "2026-02-25"
-}
-```
-
-### Health Check
-
-**Health Status**
-```
-GET /api/health
-Response: {"status":"ok"}
-```
-
-## 🐳 Docker Commands
-
-### Build Image
+### Development Mode (with auto-reload)
 ```bash
-docker-compose build --no-cache
+cargo install cargo-watch
+cargo watch -q -c -w src/ -x 'run'
 ```
 
-### View Logs
-```bash
-docker-compose logs backend --tail 100
-docker-compose logs postgres --tail 50
-```
-
-### Connect to Database
-```bash
-docker-compose exec postgres psql -U postgres -d guard_firearm_system
-```
-
-### List Tables
-```bash
-docker-compose exec -T postgres psql -U postgres -d guard_firearm_system -c "\dt"
-```
-
-### Stop Services
-```bash
-docker-compose down
-```
-
-### Remove All Data
-```bash
-docker-compose down -v
-```
-
-## 🛠️ Development
-
-### Project Structure
-```
-src/
-├── main.rs              # Router setup
-├── db.rs               # Database connection & migrations
-├── config.rs           # Configuration management
-├── error.rs            # Error handling
-├── models.rs           # Data structures
-├── handlers/           # API handlers
-│   ├── auth.rs
-│   ├── users.rs
-│   ├── firearms.rs
-│   ├── firearm_allocation.rs
-│   ├── guard_replacement.rs
-│   ├── health.rs
-│   └── mod.rs
-└── utils.rs            # Helper functions
-```
-
-### Run Tests
-```bash
-cargo test
-
-# With output
-cargo test -- --nocapture
-
-# Specific test
-cargo test test_name
-```
-
-### Format Code
-```bash
-cargo fmt
-```
-
-### Lint Code
-```bash
-cargo clippy
-```
-
-### Build Optimized
+### Production Build
 ```bash
 cargo build --release
+./target/release/server
 ```
 
-## 📊 Database Migrations
-
-Migrations run automatically on startup. SQL migrations are in `schema/` directory:
-- Users table with role-based access
-- Verification codes table
-- Firearm inventory tables
-- Allocation tracking tables
-- Attendance and shift tables
-- Alert notifications table
-
-## 🔐 Security Features
-
-- Password hashing with bcrypt (12 rounds)
-- Email verification required for new accounts
-- Role-based access control
-- CORS enabled for frontend
-- Database connection pooling
-- Input validation on all endpoints
-- SQL injection prevention via prepared statements
-
-## 🐛 Troubleshooting
-
-### Database Connection Error
-```
-Error: connection to server on socket failed
-```
-Solution: Ensure PostgreSQL container is healthy
+### Running Tests
 ```bash
-docker-compose ps
-docker-compose logs postgres
+cargo test
 ```
 
-### Port Already in Use
-```
-Error: bind: address already in use
-```
-Solution: Change port in docker-compose.yml or stop conflicting service
+## Environment Variables
+Create a `.env` file in the backend-rust directory:
 
-### Migration Failed
 ```
-Error: database "guard_firearm_system" does not exist
+SERVER_HOST=0.0.0.0
+SERVER_PORT=5000
+DATABASE_URL=postgresql://user:password@localhost:5432/guard_firearm_system
+GMAIL_USER=your_email@gmail.com
+GMAIL_PASSWORD=your_app_specific_password
+ADMIN_CODE=122601
 ```
-Solution: Recreate containers with fresh database
+
+### Note on Gmail Password
+For Gmail, you need to generate an "App Password":
+1. Enable 2-Factor Authentication on your Google account
+2. Go to https://myaccount.google.com/apppasswords
+3. Select "Mail" and "Windows/Linux/Mac"
+4. Generate and use the provided app password
+
+## API Endpoints
+
+### Authentication
+- `POST /api/register` - Register a new user
+- `POST /api/login` - Login user
+- `POST /api/verify` - Verify email with code
+- `POST /api/resend-code` - Resend verification code
+
+### Users
+- `GET /api/users` - Get all users
+- `GET /api/user/:id` - Get user by ID
+- `PUT /api/user/:id` - Update user
+- `DELETE /api/user/:id` - Delete user
+
+### Firearms
+- `POST /api/firearms` - Add firearm
+- `GET /api/firearms` - Get all firearms
+- `GET /api/firearms/:id` - Get firearm by ID
+- `PUT /api/firearms/:id` - Update firearm
+- `DELETE /api/firearms/:id` - Delete firearm
+
+### Firearm Allocation
+- `POST /api/firearm-allocation/issue` - Issue firearm
+- `POST /api/firearm-allocation/return` - Return firearm
+- `GET /api/guard-allocations/:guard_id` - Get allocations for a guard
+- `GET /api/firearm-allocations/active` - Get all active allocations
+
+### Guard Replacement
+- `POST /api/guard-replacement/shifts` - Create shift
+- `POST /api/guard-replacement/attendance/check-in` - Check in
+- `POST /api/guard-replacement/attendance/check-out` - Check out
+- `POST /api/guard-replacement/detect-no-shows` - Detect no-shows
+- `POST /api/guard-replacement/request-replacement` - Request replacement
+- `POST /api/guard-replacement/set-availability` - Set availability
+
+### Health
+- `GET /api/health` - Health check
+
+## Project Structure
+```
+backend-rust/
+├── src/
+│   ├── main.rs           # Entry point
+│   ├── config.rs         # Configuration
+│   ├── db.rs             # Database setup and migrations
+│   ├── error.rs          # Error handling
+│   ├── models.rs         # Data models
+│   ├── utils.rs          # Utility functions
+│   ├── routes.rs         # Route definitions
+│   └── handlers/         # Request handlers
+│       ├── mod.rs
+│       ├── auth.rs
+│       ├── users.rs
+│       ├── firearms.rs
+│       ├── firearm_allocation.rs
+│       ├── guard_replacement.rs
+│       └── health.rs
+├── Cargo.toml
+├── Cargo.lock
+├── .env.example
+└── .gitignore
+```
+
+## Troubleshooting
+
+### Connection refused
+Make sure PostgreSQL is running on your system.
+
+### Compilation errors
+Ensure you have Rust 1.70+ installed:
 ```bash
-docker-compose down -v
-docker-compose up -d
+rustup update
 ```
 
-### Compilation Error - SQLx Macros
-All `sqlx::query!()` macros have been converted to `sqlx::query()` for offline compilation. No database needed at build time.
+### Database migration issues
+The migrations run automatically on startup. If you need to reset:
+1. Drop the database: `DROP DATABASE guard_firearm_system;`
+2. Create it again: `CREATE DATABASE guard_firearm_system;`
+3. Restart the server
 
-## 📝 Contributing
+## Performance Tips
+- Use connection pooling (default: 5 connections)
+- Enable release mode for production
+- Monitor database query performance with logging enabled
 
-1. Follow Rust naming conventions
-2. Run `cargo fmt` before committing
-3. Ensure `cargo clippy` passes
-4. Add tests for new features
-5. Update API documentation
-
-## 📄 License
-
-Confidential - Authorized use only
-
-## 👥 Support
-
-For backend-specific issues or questions, check the logs:
-```bash
-docker-compose logs backend
-```
+## Next Steps
+1. Set up PostgreSQL and create the database
+2. Configure environment variables in `.env`
+3. Run `cargo run` to start the development server
+4. Update your frontend to point to `http://localhost:5000` for API calls
