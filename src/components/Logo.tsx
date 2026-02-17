@@ -54,16 +54,16 @@ const Logo: FC<LogoProps> = ({ onClick }) => {
         <circle cx="130" cy="80" r="2" fill="white" opacity="0.5"/>
         
         {/* Agency Name Text */}
-        <text x="220" y="75" fontFamily="'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" 
-              fontSize="18" fontWeight="700" fill="#333" letterSpacing="0.5">
+        <text x="220" y="65" fontFamily="'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" 
+              fontSize="24" fontWeight="700" fill="#333" letterSpacing="0.5">
           Davao Security &
         </text>
-        <text x="220" y="100" fontFamily="'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" 
-              fontSize="18" fontWeight="700" fill="#333" letterSpacing="0.5">
+        <text x="220" y="95" fontFamily="'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" 
+              fontSize="24" fontWeight="700" fill="#333" letterSpacing="0.5">
           Investigation Agency
         </text>
         <text x="220" y="125" fontFamily="'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" 
-              fontSize="12" fontWeight="600" fill="#667eea" letterSpacing="0.3">
+              fontSize="16" fontWeight="600" fill="#667eea" letterSpacing="0.3">
           Inc.
         </text>
       </svg>
