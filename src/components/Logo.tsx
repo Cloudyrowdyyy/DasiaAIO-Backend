@@ -13,7 +13,7 @@ const Logo: FC<LogoProps> = ({ onClick }) => {
       style={{ cursor: onClick ? 'pointer' : 'default' }}
     >
       <img 
-        src="/images/logo.png" 
+        src="/images/logo.svg" 
         alt="Company Logo" 
         className="logo"
       />
