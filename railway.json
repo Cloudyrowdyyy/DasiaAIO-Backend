@@ -10,7 +10,7 @@
         "SERVER_PORT": "$PORT",
         "ADMIN_CODE": "122601",
         "RUST_LOG": "info",
-        "DATABASE_URL": "${{ services.postgres.variables.DATABASE_URL }}"
+        "DATABASE_URL": "postgresql://${{ services.postgres.variables.POSTGRES_USER }}:${{ services.postgres.variables.POSTGRES_PASSWORD }}@${{ services.postgres.variables.PGHOST }}:${{ services.postgres.variables.PGPORT }}/${{ services.postgres.variables.POSTGRES_DB }}"
       }
     },
     "frontend": {
@@ -25,7 +25,9 @@
       "variables": {
         "POSTGRES_USER": "postgres",
         "POSTGRES_PASSWORD": "${{ secrets.DB_PASSWORD }}",
-        "POSTGRES_DB": "guard_firearm_system"
+        "POSTGRES_DB": "guard_firearm_system",
+        "PGHOST": "${{ services.postgres.host }}",
+        "PGPORT": "${{ services.postgres.port }}"
       }
     }
   }
