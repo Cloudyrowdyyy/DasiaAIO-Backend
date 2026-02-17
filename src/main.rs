@@ -79,7 +79,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             CorsLayer::permissive()
                 .allow_origin(Any)
                 .allow_methods(Any)
-                .allow_headers(vec![header::CONTENT_TYPE])
+                .allow_headers(Any)
         )
         .layer(TraceLayer::new_for_http())
         .with_state(db);
