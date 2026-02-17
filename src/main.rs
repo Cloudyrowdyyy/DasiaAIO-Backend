@@ -36,6 +36,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let db = Arc::new(db_pool);
 
+    // CORS configuration
+    let cors_layer = CorsLayer::very_permissive();
+
     // Build router
     let app = Router::new()
         // Auth routes
@@ -74,11 +77,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Health check
         .route("/api/health", get(handlers::health::health_check))
         
-        .layer(DefaultBodyLimit::max(1024 * 1024)) // 1MB limit
-        .layer(
-            CorsLayer::very_permissive()
-        )
+        .layer(cors_layer)
         .layer(TraceLayer::new_for_http())
+        .layer(DefaultBodyLimit::max(1024 * 1024)) // 1MB limit
         .with_state(db);
 
     let listener = tokio::net::TcpListener::bind(format!("{}:{}", config.server_host, config.server_port))
