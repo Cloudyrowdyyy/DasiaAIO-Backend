@@ -89,26 +89,28 @@ That's it! The backend is now running in the background.
 
 ## 🔐 Logging In
 
-### Admin Account (Full Access)
-Use this to manage the entire system:
+### Admin Account (Full System Access)
+Use this to manage everything:
 ```
-Email:    dkgagaamain@gmail.com
-Password: december262001
+Username: admin
+Email:    admin@gmail.com
+Password: admin123
 ```
 
 **What you can do:**
-- ✓ View all users
+- ✓ View all users in the system
 - ✓ Edit user details (name, phone, license, expiry date)
 - ✓ Delete users
 - ✓ View firearm inventory
 - ✓ Manage allocations
 - ✓ View all reports
 
-### Guard Account (Limited Access)
-Use this to see guard features:
+### User Account (Limited Access)
+Use this to see user features:
 ```
-Email:    testguard2025@gmail.com
-Password: TestPass123!
+Username: user
+Email:    user@gmail.com
+Password: user123
 ```
 
 **What you can do:**

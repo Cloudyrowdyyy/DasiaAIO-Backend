@@ -1,11 +1,11 @@
-# Davao Security & Investigation Agency - Guard Firearm Management System
+# DASIA AIO Management System
 
 A comprehensive web & desktop application for managing firearm inventory, allocation, maintenance, and guard scheduling with role-based access control.
 
 ## Features
 
 ### Core Functionality
-- **User Authentication**: Email-based registration and login with email verification
+- **User Authentication**: Multi-credential login (email, username, or phone) with email verification
 - **Role-Based Access Control**: Superadmin, Admin, Guard, and User roles with specialized dashboards
 - **Firearm Inventory Management**: Add, edit, track firearm details, serial numbers, and status
 - **Firearm Allocation**: Issue and return firearms with real-time allocation tracking
@@ -83,14 +83,28 @@ RUST_LOG=debug
 PORT=5000
 ```
 
+## Quick Test
+
+```bash
+# Admin login (works with: admin, admin@gmail.com)
+curl -X POST http://localhost:5000/api/login \
+  -H "Content-Type: application/json" \
+  -d '{"identifier":"admin","password":"admin123"}'
+
+# User login (works with: user, user@gmail.com)
+curl -X POST http://localhost:5000/api/login \
+  -H "Content-Type: application/json" \
+  -d '{"identifier":"user","password":"user123"}'
+```
+
 ## API Endpoints
 
 ### Authentication
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/register` | Register new user |
-| POST | `/api/login` | Login user |
-| POST | `/api/verify` | Verify email |
+| POST | `/api/register` | Register new user with email, username, password |
+| POST | `/api/login` | Login with email, username, or phone |
+| POST | `/api/verify` | Verify email with code |
 | POST | `/api/resend-code` | Resend verification code |
 
 ### User Management
