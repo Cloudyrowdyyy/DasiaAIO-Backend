@@ -1,6 +1,7 @@
 import { useState, useEffect, FC } from 'react'
 import Logo from './Logo'
 import EditUserModal from './EditUserModal'
+import { API_BASE_URL } from '../config'
 import './AdminDashboard.css'
 
 interface User {
@@ -33,7 +34,7 @@ const AdminDashboard: FC<AdminDashboardProps> = ({ onLogout }) => {
   const fetchUsers = async () => {
     try {
       setLoading(true)
-      const response = await fetch('http://localhost:5000/api/users')
+      const response = await fetch(`${API_BASE_URL}/api/users`)
       if (!response.ok) {
         throw new Error('Failed to fetch users')
       }

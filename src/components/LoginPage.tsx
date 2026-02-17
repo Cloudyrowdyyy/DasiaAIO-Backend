@@ -1,6 +1,7 @@
 import { useState, FC, FormEvent, ChangeEvent } from 'react'
 import Logo from './Logo'
 import { User } from '../App'
+import { API_BASE_URL } from '../config'
 import './LoginPage.css'
 
 interface LoginPageProps {
@@ -69,7 +70,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
           return
         }
 
-        const response = await fetch('http://localhost:5000/api/verify', {
+        const response = await fetch(`${API_BASE_URL}/api/verify`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: verificationEmail, code: verificationCode })
@@ -160,7 +161,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
         
         console.log('Registering with:', requestBody)
         
-        const response = await fetch('http://localhost:5000/api/register', {
+        const response = await fetch(`${API_BASE_URL}/api/register`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(requestBody)
@@ -207,7 +208,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
         console.log('Attempting login with:', { identifier, password: '***' })
 
         // Call backend login
-        const response = await fetch('http://localhost:5000/api/login', {
+        const response = await fetch(`${API_BASE_URL}/api/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ identifier, password })
@@ -298,7 +299,7 @@ const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
                       onClick={async () => {
                         setIsLoading(true)
                         try {
-                          const response = await fetch('http://localhost:5000/api/resend-code', {
+                          const response = await fetch(`${API_BASE_URL}/api/resend-code`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ email: verificationEmail })

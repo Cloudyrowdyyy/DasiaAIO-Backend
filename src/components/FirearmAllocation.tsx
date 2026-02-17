@@ -1,5 +1,6 @@
 import { useState, useEffect, FC } from 'react'
 import Logo from './Logo'
+import { API_BASE_URL } from '../config'
 import '../styles/FirearmAllocation.css'
 
 interface Allocation {
@@ -28,7 +29,7 @@ const FirearmAllocation: FC<Props> = ({ onLogout, onViewChange }) => {
   const fetchAllocations = async () => {
     try {
       setLoading(true)
-      const response = await fetch('http://localhost:5000/api/firearm-allocations')
+      const response = await fetch(`${API_BASE_URL}/api/firearm-allocations`)
       if (response.ok) {
         const data = await response.json()
         setAllocations(data.allocations || [])

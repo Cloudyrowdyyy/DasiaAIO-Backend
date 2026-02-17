@@ -1,5 +1,6 @@
 import { useState, useEffect, FC } from 'react'
 import Logo from './Logo'
+import { API_BASE_URL } from '../config'
 import '../styles/FirearmInventory.css'
 
 interface Firearm {
@@ -29,7 +30,7 @@ const FirearmInventory: FC<Props> = ({ user, onLogout, onViewChange }) => {
   const fetchFirearms = async () => {
     try {
       setLoading(true)
-      const response = await fetch('http://localhost:5000/api/firearms')
+      const response = await fetch(`${API_BASE_URL}/api/firearms`)
       if (response.ok) {
         const data = await response.json()
         setFirearms(data.firearms || [])

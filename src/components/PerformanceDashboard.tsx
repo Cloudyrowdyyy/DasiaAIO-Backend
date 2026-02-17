@@ -1,5 +1,6 @@
 import { useState, useEffect, FC } from 'react'
 import Logo from './Logo'
+import { API_BASE_URL } from '../config'
 import './PerformanceDashboard.css'
 
 interface User {
@@ -33,7 +34,7 @@ const PerformanceDashboard: FC<Props> = ({ user, onLogout, onViewChange }) => {
     try {
       setLoading(true)
       // Simulated performance data from attendance and allocations
-      const response = await fetch('http://localhost:5000/api/users')
+      const response = await fetch(`${API_BASE_URL}/api/users`)
       if (response.ok) {
         const data = await response.json()
         // Create mock performance data

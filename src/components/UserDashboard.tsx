@@ -1,5 +1,6 @@
 import { useState, useEffect, FC } from 'react'
 import Logo from './Logo'
+import { API_BASE_URL } from '../config'
 import './UserDashboard.css'
 
 interface User {
@@ -37,7 +38,7 @@ const UserDashboard: FC<UserDashboardProps> = ({ user, onLogout }) => {
 
   const fetchAttendance = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/attendance')
+      const response = await fetch(`${API_BASE_URL}/api/attendance`)
       if (response.ok) {
         const data = await response.json()
         setAttendance(data.attendance || [])

@@ -1,6 +1,7 @@
 import { useState, useEffect, FC } from 'react'
 import Logo from './Logo'
 import EditUserModal from './EditUserModal'
+import { API_BASE_URL } from '../config'
 import './SuperadminDashboard.css'
 
 interface User {
@@ -35,7 +36,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ onLogout, onViewCha
   const fetchData = async () => {
     try {
       setLoading(true)
-      const response = await fetch('http://localhost:5000/api/users')
+      const response = await fetch(`${API_BASE_URL}/api/users`)
       if (response.ok) {
         const data = await response.json()
         setUsers(data.users)
@@ -73,7 +74,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ onLogout, onViewCha
     if (!editingUser) return
 
     try {
-      const response = await fetch(`http://localhost:5000/api/user/${editingUser.id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/user/${editingUser.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -100,7 +101,7 @@ const SuperadminDashboard: FC<SuperadminDashboardProps> = ({ onLogout, onViewCha
     }
 
     try {
-      const response = await fetch(`http://localhost:5000/api/user/${userId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/user/${userId}`, {
         method: 'DELETE',
       })
 

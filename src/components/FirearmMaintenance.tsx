@@ -1,5 +1,6 @@
 import { useState, useEffect, FC } from 'react'
 import Logo from './Logo'
+import { API_BASE_URL } from '../config'
 import '../styles/FirearmMaintenance.css'
 
 interface Maintenance {
@@ -30,7 +31,7 @@ const FirearmMaintenance: FC<Props> = ({ user, onLogout, onViewChange }) => {
   const fetchMaintenances = async () => {
     try {
       setLoading(true)
-      const response = await fetch('http://localhost:5000/api/firearm-maintenance')
+      const response = await fetch(`${API_BASE_URL}/api/firearm-maintenance`)
       if (response.ok) {
         const data = await response.json()
         setMaintenances(data.maintenances || [])
