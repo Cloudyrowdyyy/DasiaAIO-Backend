@@ -15,9 +15,7 @@
     "frontend": {
       "buildCommand": "npm install && npm run build",
       "startCommand": "npm run preview",
-      "variables": {
-        "VITE_API_URL": "${{ services.backend.public.url }}"
-      }
+      "variables": {}
     },
     "postgres": {
       "image": "postgres:15-alpine",
