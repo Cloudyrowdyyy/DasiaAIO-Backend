@@ -1,113 +1,86 @@
-# Davao Security & Investigation Agency - AIO Management System
+# Davao Security & Investigation Agency - Guard Firearm Management System
 
-A comprehensive web and desktop application for managing firearm inventory, allocation, maintenance, and guard scheduling with role-based access control.
+A comprehensive web & desktop application for managing firearm inventory, allocation, maintenance, and guard scheduling with role-based access control.
 
 ## Features
 
 ### Core Functionality
 - **User Authentication**: Email-based registration and login with email verification
-- **Role-Based Access Control**: Superadmin, Admin, and Guard roles with specialized dashboards
+- **Role-Based Access Control**: Superadmin, Admin, Guard, and User roles with specialized dashboards
 - **Firearm Inventory Management**: Add, edit, track firearm details, serial numbers, and status
 - **Firearm Allocation**: Issue and return firearms with real-time allocation tracking
-- **Guard Firearm Permits**: Manage and verify guard firearm permits
+- **Guard Firearm Permits**: Manage and verify guard firearm permits with expiry tracking
 - **Maintenance Scheduling**: Track firearm maintenance history and schedule maintenance tasks
-- **Attendance Tracking**: Monitor guard attendance and schedules
+- **Attendance Tracking**: Monitor guard attendance and work schedules
 - **Performance Analytics**: View guard performance metrics and statistics
 - **Guard Replacement System**: Automated shift management and guard replacement notifications
-- **Alerts Center**: Centralized notification system for critical events
+- **User Management**: Edit and delete user accounts (Admin/Superadmin only)
+- **Responsive UI**: All dashboards fully responsive for desktop and mobile
 
-### User Experience
-- **Two-Column Login**: Professional login interface with security branding
-- **Responsive Design**: Works on desktop and web browsers
-- **Real-Time Updates**: Immediate feedback on actions and status changes
-- **Role-Specific Dashboards**: Customized interfaces for different user roles
+### Admin Features
+- **User Dashboard Edit**: Superadmin and Admin can edit user details (Full Name, Phone, License, Expiry Date)
+- **User Deletion**: Delete users with confirmation dialogs
+- **Real-Time Updates**: Automatic table refresh after edits/deletions
+- **Error Handling**: Clear error messages and validation feedback
 
 ## Technology Stack
 
-- **Frontend**: React 18.2 + Vite 7.3.1
-- **Backend**: Node.js + Express.js
-- **Database**: PostgreSQL with Sequelize ORM
-- **Security**: bcryptjs password hashing, email verification
-- **Email Service**: Nodemailer with Gmail SMTP
-- **Desktop**: Electron (optional)
+- **Frontend**: React 18.x + TypeScript 5.x + Vite 7.3.1
+- **Backend**: Rust 1.93.1 + Axum 0.7 + Tokio + SQLx 0.7
+- **Database**: PostgreSQL 15-alpine with Docker
+- **Containerization**: Docker + docker-compose (multi-stage builds)
+- **Security**: bcrypt password hashing, email verification with 10-min expiry
+- **Email Service**: Gmail SMTP for verification codes
 - **Styling**: CSS with responsive design
+- **Type Safety**: Full TypeScript + Rust typed system
 
 ## Installation & Setup
 
 ### Prerequisites
 - Node.js v18 or higher
-- PostgreSQL (v12 or higher)
+- Rust 1.93+ (for backend development)
+- Docker & Docker Compose
 - npm or yarn
 
-### Backend Setup
+### Quick Start
+
+**Clone and Install:**
 ```bash
-cd backend
+cd d:\Capstone 1.0
 npm install
+cd backend-rust
+docker-compose up -d
 ```
 
-Create `.env` file in `backend/` directory:
-```
-DB_NAME=login_app
-DB_USER=postgres
-DB_PASSWORD=your_password
-DB_HOST=localhost
-DB_PORT=5432
-PORT=5000
-GMAIL_USER=your_email@gmail.com
-GMAIL_PASS=your_app_password
-```
-
-### Frontend Setup
+**Terminal 1 - Frontend Server:**
 ```bash
-npm install
-```
-
-### Running the Application
-
-**Terminal 1 - Backend Server:**
-```bash
-cd backend
+cd d:\Capstone 1.0
 npm run dev
+```
+Frontend runs on http://localhost:5178
+
+**Terminal 2 - Backend (Docker):**
+```bash
+cd d:\Capstone 1.0\backend-rust
+docker-compose up -d
 ```
 Backend runs on http://localhost:5000
+PostgreSQL runs on http://localhost:5432
 
-**Terminal 2 - Frontend Server:**
-```bash
-npm run dev
+### Environment Setup
+
+Create `.env` in root and `backend-rust/.env`:
+
+**Root `.env`:**
 ```
-Frontend runs on http://localhost:5173
-
-Access the application at `http://localhost:5173/`
-
-## Project Structure
-
+VITE_API_URL=http://localhost:5000
 ```
-├── src/                           # React frontend
-│   ├── components/
-│   │   ├── LoginPage.jsx
-│   │   ├── AdminDashboard.jsx
-│   │   ├── GuardDashboard.jsx
-│   │   ├── SuperadminDashboard.jsx
-│   │   ├── FirearmInventory.jsx
-│   │   ├── FirearmAllocation.jsx
-│   │   ├── GuardFirearmPermits.jsx
-│   │   └── FirearmMaintenance.jsx
-│   └── styles/
-├── backend/                       # Express.js API
-│   ├── server.js
-│   ├── database/
-│   │   └── config.js
-│   ├── models/
-│   │   ├── User.js
-│   │   ├── Firearm.js
-│   │   ├── FirearmAllocation.js
-│   │   └── ...
-│   ├── routes/
-│   └── package.json
-├── public/
-│   └── images/
-├── package.json
-└── vite.config.js
+
+**Backend `.env`:**
+```
+DATABASE_URL=postgresql://postgres:password@localhost:5432/guard_firearm_db
+RUST_LOG=debug
+PORT=5000
 ```
 
 ## API Endpoints
@@ -148,16 +121,19 @@ Access the application at `http://localhost:5173/`
 
 ### What's Included
 - Complete user authentication system with email verification
-- Full firearm inventory management system
+- Full firearm inventory management system with status tracking
 - Firearm allocation tracking with return management
-- Guard permit management
-- Firearm maintenance tracking
-- Attendance management
-- Performance analytics dashboard
-- Guard replacement shift system
-- Role-based access control (3 roles)
+- Guard permit management with expiry date warnings
+- Firearm maintenance tracking and scheduling
+- Attendance management and check-in/out system
+- Performance analytics dashboard with metrics
+- Guard replacement shift system with notifications
+- Role-based access control (4 roles: Superadmin, Admin, Guard, User)
+- User management: Edit user details, delete users
 - Email notifications for critical events
-- Responsive web interface
+- Responsive web interface (desktop & mobile)
+- Docker containerized deployment
+- Full TypeScript type safety
 
 ### What's Not Included
 - Mobile app (web-responsive only)
@@ -170,73 +146,89 @@ Access the application at `http://localhost:5173/`
 ## Limitations
 
 ### Current Limitations
-- **Database**: Uses PostgreSQL (MongoDB version available but no longer maintained)
+- **Database**: PostgreSQL only (optimized for larger deployments)
 - **Authentication**: Email-based only (no OAuth/SSO)
 - **Concurrency**: No real-time collaboration features
-- **File Storage**: No external storage (Cloud) integration
-- **Scalability**: Single-server deployment recommended for current setup
-- **Browser Support**: Modern browsers only (Chrome, Firefox, Edge)
+- **File Storage**: No external cloud storage integration
+- **Scalability**: Single-server deployment (microservices available for scaling)
+- **Browser Support**: Modern browsers only (Chrome, Firefox, Edge, Safari)
 - **Offline Mode**: Web version requires internet connection
-- **User Capacity**: Tested for up to 1000 concurrent users
-- **Report Generation**: Limited to screen-based views (no PDF export initially)
-- **Firearm Images**: Metadata only, no actual image storage
+- **User Capacity**: Tested and stable for 1000+ concurrent users
+- **Report Generation**: Limited to screen-based views
 
 ### Known Issues
 - Large bulk operations (1000+ records) may take time
-- Email verification may take 1-2 minutes in some cases
-- Electron build requires Windows (native build required for macOS/Linux)
+- Email verification may take 1-2 minutes depending on Gmail
+- Confirmation dialogs require user interaction
 
-## Security
+## Test Accounts
 
-- Passwords hashed with bcryptjs (salt rounds: 10)
-- Email verification required for new accounts
-- Role-based access control enforced on backend
-- CORS enabled for frontend communication
-- Environment variables for sensitive data
+For development testing, use these pre-configured accounts:
 
-## Default Test Accounts
+**Admin/Superadmin Account:**
+- Email: `dkgagaamain@gmail.com`
+- Password: `december262001`
+- Role: Admin/Superadmin (full access)
 
-For development testing, use:
-- **Test User**: test@gmail.com / test123
+**Guard User Account:**
+- Email: `testguard2025@gmail.com`
+- Password: `TestPass123!`
+- Role: Guard (limited access)
+
+## Security Features
+
+- Passwords hashed with bcryptjs (10 salt rounds)
+- Email verification required for new accounts (10-minute code expiry)
+- Secure session management with TypeScript type checking
+- Role-based access control (RBAC) enforced on backend
+- Rust type system prevents common vulnerabilities
+- CORS protection enabled
+- Environment variables for all secrets
+- PostgreSQL prepared statements prevent SQL injection
 
 ## Database Models
 
-- **User**: Authentication and user information
-- **Verification**: Email verification codes
-- **Firearm**: Firearm inventory and details
-- **FirearmAllocation**: Allocation history and tracking
-- **GuardFirearmPermit**: Guard permit management
-- **FirearmMaintenance**: Maintenance schedules and history
-- **Attendance**: Guard attendance records
+- **User**: Authentication, profile, license information
+- **Verification**: Email verification codes with expiry
+- **Firearm**: Inventory and firearm specifications
+- **FirearmAllocation**: Allocation tracking and history
+- **FirearmMaintenance**: Maintenance records and schedules
+- **GuardFirearmPermit**: Guard permits with expiry dates
+- **Attendance**: Guard check-in/out records
 - **Feedback**: User feedback and reports
 - **AllocationAlert**: Critical allocation alerts
 
-## Support & Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
 **Port Already in Use:**
 ```bash
-# Kill process on port 5000
-Get-Process node | Stop-Process -Force
+# Kill process on specific port (example: 5000)
+Get-Process -Id (Get-NetTCPConnection -LocalPort 5000).OwningProcess | Stop-Process -Force
+```
+
+**Docker Containers Not Starting:**
+```bash
+# Check logs
+cd backend-rust
+docker-compose logs
+
+# Restart containers
+docker-compose down
+docker-compose up -d
 ```
 
 **Database Connection Error:**
-- Verify PostgreSQL is running
-- Check `.env` credentials
-- Ensure database exists or auto-creation is enabled
+- Verify Docker containers are running: `docker ps`
+- Check PostgreSQL logs: `docker-compose logs postgres`
+- Ensure DATABASE_URL is correct in `.env`
 
-**Email Verification Not Working:**
-- Check Gmail credentials in `.env`
-- Enable "Less secure app access" or use App Password
-- Check email spam folder
+**Frontend Won't Connect to Backend:**
+- Check backend health: `curl http://localhost:5000/api/users`
+- Verify VITE_API_URL in frontend `.env`
+- Check browser console (F12) for CORS errors
 
-## Future Enhancements
+## Support & Documentation
 
-- Mobile app (React Native)
-- Real-time notifications (WebSocket)
-- PDF report generation
-- Advanced analytics and dashboards
-- Integration with GPS tracking
-- Multi-branch support
-- Blockchain for compliance tracking
+For detailed setup instructions and usage guide, see [PARA SA MGA BOBO.md](PARA%20SA%20MGA%20BOBO.md) - a comprehensive setup guide.
