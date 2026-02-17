@@ -1,5 +1,5 @@
 import { FC } from 'react'
-import './GuardFirearmPermits.css'
+import '../styles/GuardFirearmPermits.css'
 
 const GuardFirearmPermits: FC<any> = ({ user, onLogout }) => (
   <div className="guard-firearm-permits">

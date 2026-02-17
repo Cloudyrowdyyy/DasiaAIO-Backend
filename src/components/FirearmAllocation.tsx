@@ -1,5 +1,5 @@
 import { FC } from 'react'
-import './FirearmAllocation.css'
+import '../styles/FirearmAllocation.css'
 
 const FirearmAllocation: FC<any> = ({ user, onLogout }) => (
   <div className="firearm-allocation">

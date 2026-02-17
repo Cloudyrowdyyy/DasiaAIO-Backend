@@ -1,5 +1,5 @@
 import { FC } from 'react'
-import './FirearmInventory.css'
+import '../styles/FirearmInventory.css'
 
 interface Props {
   user: any
