@@ -16,7 +16,7 @@
   transform: scale(1.05);
 }
 
-/* Mobile - show shield only */
+/* Mobile - show shield with text below */
 .logo-mobile {
   display: block;
 }
@@ -50,9 +50,5 @@
 @media (max-width: 480px) {
   .logo {
     max-width: 100px;
-  }
-
-  .logo-container {
-    margin-bottom: 1rem;
   }
 }

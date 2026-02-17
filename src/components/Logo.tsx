@@ -12,8 +12,8 @@ const Logo: FC<LogoProps> = ({ onClick }) => {
       onClick={onClick} 
       style={{ cursor: onClick ? 'pointer' : 'default' }}
     >
-      {/* Mobile Logo - Shield Only */}
-      <svg viewBox="0 0 200 200" width="60" height="auto" xmlns="http://www.w3.org/2000/svg" className="logo logo-mobile">
+      {/* Mobile Logo - Shield with Text Below */}
+      <svg viewBox="0 0 200 280" width="90" height="auto" xmlns="http://www.w3.org/2000/svg" className="logo logo-mobile">
         <defs>
           <linearGradient id="purpleGradient" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" style={{stopColor:'#667eea',stopOpacity:1}} />
@@ -24,26 +24,41 @@ const Logo: FC<LogoProps> = ({ onClick }) => {
           </filter>
         </defs>
         
-        <circle cx="100" cy="100" r="95" fill="white" filter="url(#shadow)"/>
-        <path d="M 100 30 L 160 60 L 160 110 C 160 150 100 165 100 165 C 100 165 40 150 40 110 L 40 60 Z" 
+        {/* Shield */}
+        <circle cx="100" cy="80" r="75" fill="white" filter="url(#shadow)"/>
+        <path d="M 100 15 L 150 45 L 150 95 C 150 130 100 145 100 145 C 100 145 50 130 50 95 L 50 45 Z" 
               fill="url(#purpleGradient)" 
               filter="url(#shadow)"/>
-        <path d="M 100 40 L 155 65 L 155 110 C 155 145 100 158 100 158 C 100 158 45 145 45 110 L 45 65 Z" 
+        <path d="M 100 25 L 145 50 L 145 95 C 145 125 100 138 100 138 C 100 138 55 125 55 95 L 55 50 Z" 
               fill="none" 
               stroke="white" 
               strokeWidth="2" 
               opacity="0.3"/>
-        <g transform="translate(100, 100)">
-          <circle cx="0" cy="0" r="25" fill="white" opacity="0.1"/>
-          <path d="M -8 2 L -2 8 L 10 -4" 
+        <g transform="translate(100, 80)">
+          <circle cx="0" cy="0" r="20" fill="white" opacity="0.1"/>
+          <path d="M -6 1 L -1 6 L 8 -3" 
                 stroke="white" 
-                strokeWidth="3" 
+                strokeWidth="2.5" 
                 fill="none" 
                 strokeLinecap="round" 
                 strokeLinejoin="round"/>
         </g>
-        <circle cx="70" cy="80" r="2" fill="white" opacity="0.5"/>
-        <circle cx="130" cy="80" r="2" fill="white" opacity="0.5"/>
+        <circle cx="75" cy="65" r="1.5" fill="white" opacity="0.5"/>
+        <circle cx="125" cy="65" r="1.5" fill="white" opacity="0.5"/>
+        
+        {/* Text Below Shield */}
+        <text x="100" y="180" fontFamily="'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" 
+              fontSize="11" fontWeight="700" fill="#333" letterSpacing="0.3" textAnchor="middle">
+          Davao Security
+        </text>
+        <text x="100" y="195" fontFamily="'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" 
+              fontSize="11" fontWeight="700" fill="#333" letterSpacing="0.3" textAnchor="middle">
+          Investigation
+        </text>
+        <text x="100" y="210" fontFamily="'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" 
+              fontSize="8" fontWeight="600" fill="#667eea" letterSpacing="0.2" textAnchor="middle">
+          Agency Inc.
+        </text>
       </svg>
 
       {/* Desktop Logo - Shield + Text */}
