@@ -1,86 +1,156 @@
-# DASIA AIO Management System
+# Prerequisites
+- Rust 1.70+ (install from https://rustup.rs/)
+- PostgreSQL 12+
+- Git
 
-> **Comprehensive Asset Management & Operations Platform**
+# Setup Instructions
 
-A modern, full-stack web application for managing assets, inventory, and operations. Built with React, TypeScript, Rust, and PostgreSQL.
+## 1. Install Rust
+If you haven't already installed Rust, run:
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```
 
----
+## 2. Clone and Setup
+```bash
+cd backend-rust
+cp .env.example .env
+# Edit .env with your PostgreSQL connection string and Gmail credentials
+```
 
-## 📖 Documentation
+## 3. Database Setup
+Make sure PostgreSQL is running. Create a new database:
+```postgresql
+CREATE DATABASE guard_firearm_system;
+```
 
-**👉 [View Full Documentation & Setup Guide](https://cloudyrowdyyy.github.io/capstone-1.0)**
+Update the `DATABASE_URL` in your `.env` file with the correct PostgreSQL connection details.
 
-All information about installation, features, API endpoints, and deployment can be found on the documentation site.
+## 4. Build and Run
 
----
+### Development Mode (with auto-reload)
+```bash
+cargo install cargo-watch
+cargo watch -q -c -w src/ -x 'run'
+```
 
-## 🎯 Quick Links
+### Production Build
+```bash
+cargo build --release
+./target/release/server
+```
 
-- **Live Application:** https://dasiaaio.up.railway.app
-- **Documentation:** https://cloudyrowdyyy.github.io/capstone-1.0
-- **GitHub Repository:** https://github.com/Cloudyrowdyyy/capstone-1.0
+### Running Tests
+```bash
+cargo test
+```
 
----
+## Environment Variables
+Create a `.env` file in the backend-rust directory:
 
-## 📦 Tech Stack
+```
+SERVER_HOST=0.0.0.0
+SERVER_PORT=5000
+DATABASE_URL=postgresql://user:password@localhost:5432/guard_firearm_system
+GMAIL_USER=your_email@gmail.com
+GMAIL_PASSWORD=your_app_specific_password
+ADMIN_CODE=122601
+```
 
-- **Frontend:** React 18 + TypeScript + Vite
-- **Backend:** Rust + Axum
-- **Database:** PostgreSQL
-- **Deployment:** Docker + Railway
+### Note on Gmail Password
+For Gmail, you need to generate an "App Password":
+1. Enable 2-Factor Authentication on your Google account
+2. Go to https://myaccount.google.com/apppasswords
+3. Select "Mail" and "Windows/Linux/Mac"
+4. Generate and use the provided app password
 
----
+## API Endpoints
 
-**Complete documentation is available at:** [`https://cloudyrowdyyy.github.io/capstone-1.0`](https://cloudyrowdyyy.github.io/capstone-1.0)
+### Authentication
+- `POST /api/register` - Register a new user
+- `POST /api/login` - Login user
+- `POST /api/verify` - Verify email with code
+- `POST /api/resend-code` - Resend verification code
 
-The documentation site includes:
-- **Installation & Setup** - Step-by-step installation guide
-- **API Reference** - Complete API documentation
-- **Deployment Guide** - Railway & local deployment instructions
-- **Features Overview** - Core modules and capabilities
+### Users
+- `GET /api/users` - Get all users
+- `GET /api/user/:id` - Get user by ID
+- `PUT /api/user/:id` - Update user
+- `DELETE /api/user/:id` - Delete user
 
-- **[DOCUMENTATION.md](DOCUMENTATION.md)** - Comprehensive technical documentation
+### Firearms
+- `POST /api/firearms` - Add firearm
+- `GET /api/firearms` - Get all firearms
+- `GET /api/firearms/:id` - Get firearm by ID
+- `PUT /api/firearms/:id` - Update firearm
+- `DELETE /api/firearms/:id` - Delete firearm
 
----
+### Firearm Allocation
+- `POST /api/firearm-allocation/issue` - Issue firearm
+- `POST /api/firearm-allocation/return` - Return firearm
+- `GET /api/guard-allocations/:guard_id` - Get allocations for a guard
+- `GET /api/firearm-allocations/active` - Get all active allocations
 
-## 🤝 Contributing
+### Guard Replacement
+- `POST /api/guard-replacement/shifts` - Create shift
+- `POST /api/guard-replacement/attendance/check-in` - Check in
+- `POST /api/guard-replacement/attendance/check-out` - Check out
+- `POST /api/guard-replacement/detect-no-shows` - Detect no-shows
+- `POST /api/guard-replacement/request-replacement` - Request replacement
+- `POST /api/guard-replacement/set-availability` - Set availability
 
-1. Fork the repository
-2. Create feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open Pull Request
+### Health
+- `GET /api/health` - Health check
 
----
+## Project Structure
+```
+backend-rust/
+├── src/
+│   ├── main.rs           # Entry point
+│   ├── config.rs         # Configuration
+│   ├── db.rs             # Database setup and migrations
+│   ├── error.rs          # Error handling
+│   ├── models.rs         # Data models
+│   ├── utils.rs          # Utility functions
+│   ├── routes.rs         # Route definitions
+│   └── handlers/         # Request handlers
+│       ├── mod.rs
+│       ├── auth.rs
+│       ├── users.rs
+│       ├── firearms.rs
+│       ├── firearm_allocation.rs
+│       ├── guard_replacement.rs
+│       └── health.rs
+├── Cargo.toml
+├── Cargo.lock
+├── .env.example
+└── .gitignore
+```
 
-## 📄 License
+## Troubleshooting
 
-This project is proprietary software. Unauthorized copying prohibited.
+### Connection refused
+Make sure PostgreSQL is running on your system.
 
----
+### Compilation errors
+Ensure you have Rust 1.70+ installed:
+```bash
+rustup update
+```
 
-## 👥 Team
+### Database migration issues
+The migrations run automatically on startup. If you need to reset:
+1. Drop the database: `DROP DATABASE guard_firearm_system;`
+2. Create it again: `CREATE DATABASE guard_firearm_system;`
+3. Restart the server
 
-- **Frontend**: React/TypeScript development
-- **Backend**: Rust/Axum API server
-- **Database**: PostgreSQL management
+## Performance Tips
+- Use connection pooling (default: 5 connections)
+- Enable release mode for production
+- Monitor database query performance with logging enabled
 
----
-
-## 📞 Support
-
-For issues or questions:
-1. Check [DOCUMENTATION.md](DOCUMENTATION.md)
-2. Review error logs in Railway dashboard
-3. Check browser developer console (F12)
-
----
-
-## 🔗 Live Demo
-
-**Production**: [https://dasiaaio.up.railway.app](https://dasiaaio.up.railway.app)
-
----
-
-**Last Updated**: February 17, 2026  
-**Status**: ✅ Active & Maintained
+## Next Steps
+1. Set up PostgreSQL and create the database
+2. Configure environment variables in `.env`
+3. Run `cargo run` to start the development server
+4. Update your frontend to point to `http://localhost:5000` for API calls

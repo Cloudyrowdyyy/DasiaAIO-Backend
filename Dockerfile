@@ -1,32 +1,33 @@
-# Stage 1: Build the React+Vite app
-FROM node:20-alpine as builder
+# Build stage
+FROM rust:1.93.1-bookworm as builder
 
 WORKDIR /app
 
-# Install dependencies
-COPY package*.json ./
-RUN npm install
+# Copy manifests and source
+COPY Cargo.toml .
+COPY src ./src
 
-# Build the app
-COPY . .
-RUN npm run build
+# Disable SQLx compile-time checking (no database available during build)
+ENV SQLX_OFFLINE=true
 
-# Stage 2: Serve the app with a simple server
-FROM node:20-alpine
+# Build the application
+RUN cargo build --release
+
+# Runtime stage
+FROM debian:bookworm-slim
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ca-certificates && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Install serve package to serve the static files
-RUN npm install -g serve
+# Copy the binary from builder
+COPY --from=builder /app/target/release/server /app/server
 
-# Copy built app from builder stage
-COPY --from=builder /app/app-dist ./app-dist
+EXPOSE 5000
 
-# Expose port (Railway uses dynamic port from $PORT)
-EXPOSE 3000
+ENV RUST_LOG=info
 
-# Environment variable for API URL will be passed by Railway
-ENV VITE_API_URL=${VITE_API_URL:-http://localhost:5000}
-
-# Start the app (serve only needs port number)
-CMD ["/bin/sh", "-c", "serve -s app-dist -l ${PORT:-3000}"]
+CMD ["/app/server"]
