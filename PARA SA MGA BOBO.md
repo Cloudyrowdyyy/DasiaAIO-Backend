@@ -1,8 +1,6 @@
 # PARA SA MGA BOBO 🎯
 ## Guard Firearm Management System - Complete Setup & Usage Guide
 
-**Simpleng Gabay para sa lahat ng users (Simple guide for everyone)**
-
 ---
 
 ## 📋 Table of Contents
