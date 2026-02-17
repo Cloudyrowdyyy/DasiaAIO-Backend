@@ -459,68 +459,258 @@
   .guard-dashboard-modal {
     width: 95%;
     max-height: 95vh;
+    border-radius: 10px;
+  }
+
+  .guard-dashboard-header {
+    padding: 15px;
   }
 
   .guard-dashboard-header h2 {
+    font-size: 18px;
+  }
+
+  .close-btn {
+    width: 40px;
+    height: 40px;
     font-size: 20px;
+  }
+
+  .guard-dashboard-container {
+    padding: 15px;
   }
 
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .stat-card {
+    padding: 12px;
+  }
+
+  .stat-label {
+    font-size: 0.8rem;
+  }
+
+  .stat-value {
+    font-size: 1.8rem;
   }
 
   .tabs {
-    flex-direction: column;
+    flex-direction: row;
+    gap: 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .tab-btn {
-    border-bottom: none;
-    border-left: 3px solid transparent;
+    border-bottom: 3px solid transparent;
+    border-left: none;
+    padding: 12px 16px;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    min-height: 44px;
+    flex-shrink: 0;
   }
 
   .tab-btn.active {
-    border-left-color: #667eea;
-    border-bottom: none;
+    border-bottom-color: #667eea;
+    border-left: none;
   }
 
   .allocations-list,
   .permits-list,
   .history-list {
     grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .allocation-card,
+  .permit-card,
+  .history-item {
+    padding: 12px;
+  }
+
+  .detail-item {
+    flex-direction: row;
+    gap: 8px;
+    font-size: 0.9rem;
+  }
+
+  .detail-item .label {
+    flex: 0 0 auto;
+    font-weight: 600;
+  }
+
+  .detail-item .value {
+    flex: 1;
+    text-align: right;
+  }
+}
+
+@media (max-width: 600px) {
+  .guard-dashboard-modal {
+    width: 98%;
+    max-height: 98vh;
+    border-radius: 8px;
+  }
+
+  .guard-dashboard-header {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .guard-dashboard-header h2 {
+    font-size: 16px;
+  }
+
+  .guard-dashboard-container {
+    padding: 12px;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .stat-card {
+    padding: 10px;
+    min-height: 80px;
+  }
+
+  .stat-label {
+    font-size: 0.75rem;
+  }
+
+  .stat-value {
+    font-size: 1.5rem;
+  }
+
+  .tab-btn {
+    padding: 10px 12px;
+    font-size: 0.8rem;
+    min-height: 40px;
+  }
+
+  .allocations-list,
+  .permits-list,
+  .history-list {
+    gap: 10px;
+  }
+
+  .allocation-card,
+  .permit-card,
+  .history-item {
+    padding: 10px;
+    border-radius: 6px;
+  }
+
+  .detail-item {
+    font-size: 0.85rem;
+  }
+
+  .action-btn {
+    padding: 8px 12px;
+    font-size: 0.8rem;
+    min-height: 40px;
   }
 }
 
 @media (max-width: 480px) {
+  .guard-dashboard-modal {
+    width: 100%;
+    max-height: 100vh;
+    border-radius: 8px 8px 0 0;
+    max-height: calc(100vh - 20px);
+  }
+
+  .guard-dashboard-header {
+    padding: 10px;
+    gap: 8px;
+  }
+
+  .guard-dashboard-header h2 {
+    font-size: 14px;
+  }
+
+  .close-btn {
+    width: 36px;
+    height: 36px;
+    font-size: 18px;
+  }
+
   .guard-dashboard-container {
-    padding: 15px;
+    padding: 10px;
   }
 
   .stats-grid {
     grid-template-columns: 1fr;
+    gap: 8px;
   }
 
   .stat-card {
-    padding: 15px;
+    padding: 10px;
+    min-height: 70px;
   }
 
-  .stat-icon {
-    font-size: 24px;
+  .stat-label {
+    font-size: 0.7rem;
   }
 
   .stat-value {
-    font-size: 24px;
+    font-size: 1.4rem;
+  }
+
+  .stat-icon {
+    font-size: 20px;
+  }
+
+  .tabs {
+    scrollbar-width: thin;
+  }
+
+  .tab-btn {
+    padding: 8px 10px;
+    font-size: 0.75rem;
+    min-height: 40px;
+  }
+
+  .allocations-list,
+  .permits-list,
+  .history-list {
+    gap: 8px;
+  }
+
+  .allocation-card,
+  .permit-card,
+  .history-item {
+    padding: 8px;
+    border-radius: 4px;
   }
 
   .detail-item {
-    flex-direction: column;
-    gap: 5px;
+    font-size: 0.8rem;
+    gap: 6px;
   }
 
   .detail-item .label {
-    flex: none;
+    font-weight: 700;
   }
 
   .detail-item .value {
-    text-align: left;
+    text-align: right;
+    font-size: 0.75rem;
+  }
+
+  .action-btn {
+    padding: 6px 10px;
+    font-size: 0.7rem;
+    min-height: 36px;
+  }
+
+  .loading-state {
+    height: 200px;
+    font-size: 14px;
   }
 }
