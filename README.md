@@ -1,254 +1,255 @@
 # DASIA AIO Management System
 
-A comprehensive web & desktop application for managing firearm inventory, allocation, maintenance, and guard scheduling with role-based access control.
+> **Comprehensive Asset Management & Operations Platform**
 
-## Features
+A modern, full-stack web application designed to streamline asset allocation, inventory management, and scheduling operations. Built with React, TypeScript, Rust, and PostgreSQL for performance, reliability, and scalability.
 
-### Core Functionality
-- **User Authentication**: Multi-credential login (email, username, or phone) with email verification
-- **Role-Based Access Control**: Superadmin, Admin, Guard, and User roles with specialized dashboards
-- **Firearm Inventory Management**: Add, edit, track firearm details, serial numbers, and status
-- **Firearm Allocation**: Issue and return firearms with real-time allocation tracking
-- **Guard Firearm Permits**: Manage and verify guard firearm permits with expiry tracking
-- **Maintenance Scheduling**: Track firearm maintenance history and schedule maintenance tasks
-- **Attendance Tracking**: Monitor guard attendance and work schedules
-- **Performance Analytics**: View guard performance metrics and statistics
-- **Guard Replacement System**: Automated shift management and guard replacement notifications
-- **User Management**: Edit and delete user accounts (Admin/Superadmin only)
-- **Responsive UI**: All dashboards fully responsive for desktop and mobile
+---
 
-### Admin Features
-- **User Dashboard Edit**: Superadmin and Admin can edit user details (Full Name, Phone, License, Expiry Date)
-- **User Deletion**: Delete users with confirmation dialogs
-- **Real-Time Updates**: Automatic table refresh after edits/deletions
-- **Error Handling**: Clear error messages and validation feedback
+## 🚀 Features
 
-## Technology Stack
+### Core Modules
 
-- **Frontend**: React 18.x + TypeScript 5.x + Vite 7.3.1
-- **Backend**: Rust 1.93.1 + Axum 0.7 + Tokio + SQLx 0.7
-- **Database**: PostgreSQL 15-alpine with Docker
-- **Containerization**: Docker + docker-compose (multi-stage builds)
-- **Security**: bcrypt password hashing, email verification with 10-min expiry
-- **Email Service**: Gmail SMTP for verification codes
-- **Styling**: CSS with responsive design
-- **Type Safety**: Full TypeScript + Rust typed system
+- **📦 Firearm Inventory Management** - Track, organize, and manage firearm assets with detailed specifications
+- **🎯 Firearm Allocation System** - Assign and track firearm distribution to authorized personnel
+- **🔧 Maintenance Tracking** - Schedule and monitor regular maintenance logs
+- **📋 Guard Permitting** - Manage guard firearm permits with expiration tracking
+- **👤 User Management** - Role-based access control (Admin, Superadmin, Guard, User)
+- **📅 Guard Scheduling** - Coordinate shifts and staffing assignments
+- **📊 Performance Analytics** - Real-time dashboards with metrics and insights
+- **🔔 Alerts & Notifications** - Real-time alerts for critical events
 
-## Installation & Setup
+### Technical Highlights
 
-### Prerequisites
-- Node.js v18 or higher
-- Rust 1.93+ (for backend development)
-- Docker & Docker Compose
-- npm or yarn
+- **React 18** - Modern UI with TypeScript for type safety
+- **Rust Backend** (Axum) - High-performance API server
+- **PostgreSQL** - Reliable, scalable database
+- **Email Verification** - Secure user registration with email validation
+- **Real-time Sync** - Live data updates across dashboards
+- **Responsive Design** - Works seamlessly on desktop and mobile
 
-### Quick Start
+---
 
-**Clone and Install:**
+## 📋 Prerequisites
+
+- **Node.js** 20+ (for frontend)
+- **Rust** 1.70+ (for backend)
+- **PostgreSQL** 13+ (database)
+- **Git** (version control)
+
+---
+
+## 🛠️ Installation & Setup
+
+### 1. Clone the Repository
 ```bash
-cd d:\Capstone 1.0
+git clone https://github.com/Cloudyrowdyyy/capstone-1.0.git
+cd capstone-1.0
+```
+
+### 2. Frontend Setup
+```bash
+# Install dependencies
 npm install
-cd backend-rust
-docker-compose up -d
-```
 
-**Terminal 1 - Frontend Server:**
-```bash
-cd d:\Capstone 1.0
+# Start development server
 npm run dev
+# Runs at http://localhost:5173
 ```
-Frontend runs on http://localhost:5178
 
-**Terminal 2 - Backend (Docker):**
+### 3. Backend Setup
 ```bash
-cd d:\Capstone 1.0\backend-rust
-docker-compose up -d
-```
-Backend runs on http://localhost:5000
-PostgreSQL runs on http://localhost:5432
+cd backend-rust
 
-### Environment Setup
+# Create .env file with database URL
+echo "DATABASE_URL=postgresql://user:password@localhost:5432/guard_firearm_system" > .env
+echo "ADMIN_CODE=122601" >> .env
 
-Create `.env` in root and `backend-rust/.env`:
-
-**Root `.env`:**
-```
-VITE_API_URL=http://localhost:5000
+# Run migrations and start server
+cargo run
+# Runs at http://localhost:5000
 ```
 
-**Backend `.env`:**
-```
-DATABASE_URL=postgresql://postgres:password@localhost:5432/guard_firearm_db
-RUST_LOG=debug
-PORT=5000
-```
-
-## Quick Test
-
+### 4. Database Setup
 ```bash
-# Admin login (works with: admin, admin@gmail.com)
-curl -X POST http://localhost:5000/api/login \
-  -H "Content-Type: application/json" \
-  -d '{"identifier":"admin","password":"admin123"}'
+# Create PostgreSQL database
+psql -U postgres -c "CREATE DATABASE guard_firearm_system;"
 
-# User login (works with: user, user@gmail.com)
-curl -X POST http://localhost:5000/api/login \
-  -H "Content-Type: application/json" \
-  -d '{"identifier":"user","password":"user123"}'
+# Migrations run automatically on backend startup
 ```
 
-## API Endpoints
+---
+
+## 🚀 Deployment
+
+### Railway (Recommended for Free Tier)
+
+The project is configured for one-click deployment on Railway:
+
+1. **Push to GitHub**
+   ```bash
+   git add .
+   git commit -m "Ready for deployment"
+   git push origin main
+   ```
+
+2. **Deploy on Railway**
+   - Go to [railway.app](https://railway.app)
+   - Select GitHub repository
+   - Add PostgreSQL, Backend (Rust), and Frontend (React) services
+   - Set environment variables (see `DOCUMENTATION.md`)
+
+3. **Live URL**
+   - Frontend: `https://your-project.railway.app`
+   - Backend API: `https://your-backend.railway.app`
+
+---
+
+## 🔐 User Roles & Permissions
+
+| Role | Permissions |
+|------|------------|
+| **Superadmin** | Full system access, user management, all dashboards |
+| **Admin** | Inventory management, allocations, permits, maintenance |
+| **Guard** | View personal assignments, request replacements, check schedule |
+| **User** | View attendance, personal performance metrics |
+
+---
+
+## 📚 Project Structure
+
+```
+capstone-1.0/
+├── src/                        # Frontend (React + TypeScript)
+│   ├── components/            # UI components
+│   ├── styles/               # CSS styling
+│   └── config.ts             # API configuration
+├── backend-rust/             # Backend (Rust + Axum)
+│   ├── src/
+│   │   ├── handlers/         # API route handlers
+│   │   ├── models.rs         # Data models
+│   │   ├── db.rs             # Database logic
+│   │   └── main.rs           # Server entry point
+│   └── Cargo.toml            # Rust dependencies
+├── Dockerfile                # Frontend containerization
+├── railway.json              # Railway deployment config
+└── README.md                 # This file
+```
+
+---
+
+## 🔌 API Endpoints
 
 ### Authentication
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/register` | Register new user with email, username, password |
-| POST | `/api/login` | Login with email, username, or phone |
-| POST | `/api/verify` | Verify email with code |
-| POST | `/api/resend-code` | Resend verification code |
+- `POST /api/register` - User registration
+- `POST /api/login` - User login
+- `POST /api/verify` - Email verification
+- `POST /api/resend-code` - Resend verification code
 
-### User Management
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/users` | Get all users |
-| GET | `/api/user/:id` | Get user by ID |
-| PUT | `/api/user/:id` | Update user info |
-| POST | `/api/user/:id/role` | Update user role |
+### Users
+- `GET /api/users` - Get all users
+- `GET /api/user/:id` - Get user details
+- `PUT /api/user/:id` - Update user
+- `DELETE /api/user/:id` - Delete user
 
-### Firearm Management
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/firearms` | Get all firearms |
-| POST | `/api/firearms` | Add new firearm |
-| PUT | `/api/firearms/:id` | Update firearm |
-| DELETE | `/api/firearms/:id` | Delete firearm |
+### Firearms
+- `GET /api/firearms` - List all firearms
+- `POST /api/firearms` - Add firearm
+- `PUT /api/firearms/:id` - Update firearm
+- `DELETE /api/firearms/:id` - Delete firearm
 
-### Allocation & Permits
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/allocations` | Get all allocations |
-| POST | `/api/allocations` | Create allocation |
-| PUT | `/api/allocations/:id` | Update allocation |
-| GET | `/api/permits` | Get all permits |
+### Operations
+- `POST /api/firearm-allocation/issue` - Issue firearm
+- `POST /api/firearm-allocation/return` - Return firearm
+- `GET /api/firearm-allocations/active` - Get active allocations
+- `POST /api/firearm-maintenance` - Log maintenance
+- `POST /api/guard-replacement/shifts` - Create shift
 
-## Scope
+See `DOCUMENTATION.md` for complete API reference.
 
-### What's Included
-- Complete user authentication system with email verification
-- Full firearm inventory management system with status tracking
-- Firearm allocation tracking with return management
-- Guard permit management with expiry date warnings
-- Firearm maintenance tracking and scheduling
-- Attendance management and check-in/out system
-- Performance analytics dashboard with metrics
-- Guard replacement shift system with notifications
-- Role-based access control (4 roles: Superadmin, Admin, Guard, User)
-- User management: Edit user details, delete users
-- Email notifications for critical events
-- Responsive web interface (desktop & mobile)
-- Docker containerized deployment
-- Full TypeScript type safety
+---
 
-### What's Not Included
-- Mobile app (web-responsive only)
-- SMS/WhatsApp integration
-- Integration with external security systems
-- Advanced audit logging
-- Multi-language support
-- Third-party payment systems
+## 🧪 Testing
 
-## Limitations
-
-### Current Limitations
-- **Database**: PostgreSQL only (optimized for larger deployments)
-- **Authentication**: Email-based only (no OAuth/SSO)
-- **Concurrency**: No real-time collaboration features
-- **File Storage**: No external cloud storage integration
-- **Scalability**: Single-server deployment (microservices available for scaling)
-- **Browser Support**: Modern browsers only (Chrome, Firefox, Edge, Safari)
-- **Offline Mode**: Web version requires internet connection
-- **User Capacity**: Tested and stable for 1000+ concurrent users
-- **Report Generation**: Limited to screen-based views
-
-### Known Issues
-- Large bulk operations (1000+ records) may take time
-- Email verification may take 1-2 minutes depending on Gmail
-- Confirmation dialogs require user interaction
-
-## Test Accounts
-
-For development testing, use these pre-configured accounts:
-
-**Admin Account:**
-- Username: `admin`
-- Email: `admin@gmail.com`
-- Password: `admin123`
-- Role: Admin (full access)
-- Phone: +63-900-000-0001
-
-**User Account:**
-- Username: `user`
-- Email: `user@gmail.com`
-- Password: `user123`
-- Role: User (limited access)
-- Phone: +639000000002
-
-**Login Methods:** All accounts support login via username, email, or phone number
-
-## Security Features
-
-- Passwords hashed with bcryptjs (10 salt rounds)
-- Email verification required for new accounts (10-minute code expiry)
-- Secure session management with TypeScript type checking
-- Role-based access control (RBAC) enforced on backend
-- Rust type system prevents common vulnerabilities
-- CORS protection enabled
-- Environment variables for all secrets
-- PostgreSQL prepared statements prevent SQL injection
-
-## Database Models
-
-- **User**: Authentication, profile, license information
-- **Verification**: Email verification codes with expiry
-- **Firearm**: Inventory and firearm specifications
-- **FirearmAllocation**: Allocation tracking and history
-- **FirearmMaintenance**: Maintenance records and schedules
-- **GuardFirearmPermit**: Guard permits with expiry dates
-- **Attendance**: Guard check-in/out records
-- **Feedback**: User feedback and reports
-- **AllocationAlert**: Critical allocation alerts
-
-## Troubleshooting
-
-### Common Issues
-
-**Port Already in Use:**
 ```bash
-# Kill process on specific port (example: 5000)
-Get-Process -Id (Get-NetTCPConnection -LocalPort 5000).OwningProcess | Stop-Process -Force
+# Run tests
+npm test
+
+# Run with coverage
+npm test -- --coverage
 ```
 
-**Docker Containers Not Starting:**
-```bash
-# Check logs
-cd backend-rust
-docker-compose logs
+---
 
-# Restart containers
-docker-compose down
-docker-compose up -d
-```
+## 📊 Example Login Credentials
 
-**Database Connection Error:**
-- Verify Docker containers are running: `docker ps`
-- Check PostgreSQL logs: `docker-compose logs postgres`
-- Ensure DATABASE_URL is correct in `.env`
+Check `TEST_ACCOUNTS.md` for test account credentials.
 
-**Frontend Won't Connect to Backend:**
-- Check backend health: `curl http://localhost:5000/api/users`
-- Verify VITE_API_URL in frontend `.env`
-- Check browser console (F12) for CORS errors
+---
 
-## Support & Documentation
+## 🐛 Troubleshooting
 
-For detailed setup instructions and usage guide, see [PARA SA MGA BOBO.md](PARA%20SA%20MGA%20BOBO.md) - a comprehensive setup guide.
+### Backend won't start
+- Ensure PostgreSQL is running
+- Check `DATABASE_URL` environment variable
+- Verify database exists: `psql -U postgres -l | grep guard_firearm`
+
+### Frontend can't reach backend
+- Check `VITE_API_URL` in `src/config.ts`
+- Verify backend is running on port 5000
+- Check browser console for CORS errors
+
+### Database connection fails
+- Verify PostgreSQL credentials
+- Test connection: `psql postgresql://user:pass@localhost/guard_firearm_system`
+
+---
+
+## 📖 Documentation
+
+- **[DOCUMENTATION.md](DOCUMENTATION.md)** - Comprehensive technical documentation
+- **[TEST_ACCOUNTS.md](TEST_ACCOUNTS.md)** - Example login credentials
+
+---
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit changes (`git commit -m 'Add amazing feature'`)
+4. Push to branch (`git push origin feature/amazing-feature`)
+5. Open Pull Request
+
+---
+
+## 📄 License
+
+This project is proprietary software. Unauthorized copying prohibited.
+
+---
+
+## 👥 Team
+
+- **Frontend**: React/TypeScript development
+- **Backend**: Rust/Axum API server
+- **Database**: PostgreSQL management
+
+---
+
+## 📞 Support
+
+For issues or questions:
+1. Check [DOCUMENTATION.md](DOCUMENTATION.md)
+2. Review error logs in Railway dashboard
+3. Check browser developer console (F12)
+
+---
+
+## 🔗 Live Demo
+
+**Production**: [https://dasiaaio.up.railway.app](https://dasiaaio.up.railway.app)
+
+---
+
+**Last Updated**: February 17, 2026  
+**Status**: ✅ Active & Maintained
