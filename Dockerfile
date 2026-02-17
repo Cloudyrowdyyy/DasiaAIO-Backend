@@ -28,5 +28,5 @@ EXPOSE 3000
 # Environment variable for API URL will be passed by Railway
 ENV VITE_API_URL=${VITE_API_URL:-http://localhost:5000}
 
-# Start the app (using /bin/sh -c to expand environment variables)
-CMD ["/bin/sh", "-c", "serve -s app-dist -l 0.0.0.0:${PORT:-3000}"]
+# Start the app (serve only needs port number)
+CMD ["/bin/sh", "-c", "serve -s app-dist -l ${PORT:-3000}"]
