@@ -8,12 +8,12 @@ mod config;
 
 use axum::{
     extract::DefaultBodyLimit,
-    http::header,
+    http::{header, Method},
     routing::{get, post, put, delete},
     Router,
 };
 use std::sync::Arc;
-use tower_http::cors::{CorsLayer, Any};
+use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 use tracing_subscriber;
 
@@ -76,10 +76,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         
         .layer(DefaultBodyLimit::max(1024 * 1024)) // 1MB limit
         .layer(
-            CorsLayer::permissive()
-                .allow_origin(Any)
-                .allow_methods(Any)
-                .allow_headers(Any)
+            CorsLayer::very_permissive()
         )
         .layer(TraceLayer::new_for_http())
         .with_state(db);
