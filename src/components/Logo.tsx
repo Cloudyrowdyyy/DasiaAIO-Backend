@@ -12,7 +12,8 @@ const Logo: FC<LogoProps> = ({ onClick }) => {
       onClick={onClick} 
       style={{ cursor: onClick ? 'pointer' : 'default' }}
     >
-      <svg viewBox="0 0 520 200" width="280" height="auto" xmlns="http://www.w3.org/2000/svg" className="logo">
+      {/* Mobile Logo - Shield Only */}
+      <svg viewBox="0 0 200 200" width="60" height="auto" xmlns="http://www.w3.org/2000/svg" className="logo logo-mobile">
         <defs>
           <linearGradient id="purpleGradient" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" style={{stopColor:'#667eea',stopOpacity:1}} />
@@ -23,22 +24,15 @@ const Logo: FC<LogoProps> = ({ onClick }) => {
           </filter>
         </defs>
         
-        {/* Background circle */}
         <circle cx="100" cy="100" r="95" fill="white" filter="url(#shadow)"/>
-        
-        {/* Main shield shape */}
         <path d="M 100 30 L 160 60 L 160 110 C 160 150 100 165 100 165 C 100 165 40 150 40 110 L 40 60 Z" 
               fill="url(#purpleGradient)" 
               filter="url(#shadow)"/>
-        
-        {/* Shield accent/highlight */}
         <path d="M 100 40 L 155 65 L 155 110 C 155 145 100 158 100 158 C 100 158 45 145 45 110 L 45 65 Z" 
               fill="none" 
               stroke="white" 
               strokeWidth="2" 
               opacity="0.3"/>
-        
-        {/* Center icon - checkmark */}
         <g transform="translate(100, 100)">
           <circle cx="0" cy="0" r="25" fill="white" opacity="0.1"/>
           <path d="M -8 2 L -2 8 L 10 -4" 
@@ -48,12 +42,43 @@ const Logo: FC<LogoProps> = ({ onClick }) => {
                 strokeLinecap="round" 
                 strokeLinejoin="round"/>
         </g>
+        <circle cx="70" cy="80" r="2" fill="white" opacity="0.5"/>
+        <circle cx="130" cy="80" r="2" fill="white" opacity="0.5"/>
+      </svg>
+
+      {/* Desktop Logo - Shield + Text */}
+      <svg viewBox="0 0 520 200" width="280" height="auto" xmlns="http://www.w3.org/2000/svg" className="logo logo-desktop">
+        <defs>
+          <linearGradient id="purpleGradient2" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style={{stopColor:'#667eea',stopOpacity:1}} />
+            <stop offset="100%" style={{stopColor:'#764ba2',stopOpacity:1}} />
+          </linearGradient>
+          <filter id="shadow2" x="-50%" y="-50%" width="200%" height="200%">
+            <feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.15"/>
+          </filter>
+        </defs>
         
-        {/* Decorative elements */}
+        <circle cx="100" cy="100" r="95" fill="white" filter="url(#shadow2)"/>
+        <path d="M 100 30 L 160 60 L 160 110 C 160 150 100 165 100 165 C 100 165 40 150 40 110 L 40 60 Z" 
+              fill="url(#purpleGradient2)" 
+              filter="url(#shadow2)"/>
+        <path d="M 100 40 L 155 65 L 155 110 C 155 145 100 158 100 158 C 100 158 45 145 45 110 L 45 65 Z" 
+              fill="none" 
+              stroke="white" 
+              strokeWidth="2" 
+              opacity="0.3"/>
+        <g transform="translate(100, 100)">
+          <circle cx="0" cy="0" r="25" fill="white" opacity="0.1"/>
+          <path d="M -8 2 L -2 8 L 10 -4" 
+                stroke="white" 
+                strokeWidth="3" 
+                fill="none" 
+                strokeLinecap="round" 
+                strokeLinejoin="round"/>
+        </g>
         <circle cx="70" cy="80" r="2" fill="white" opacity="0.5"/>
         <circle cx="130" cy="80" r="2" fill="white" opacity="0.5"/>
         
-        {/* Agency Name Text */}
         <text x="220" y="65" fontFamily="'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" 
               fontSize="24" fontWeight="700" fill="#333" letterSpacing="0.5">
           Davao Security &

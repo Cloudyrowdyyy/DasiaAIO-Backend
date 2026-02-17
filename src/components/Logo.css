@@ -16,6 +16,26 @@
   transform: scale(1.05);
 }
 
+/* Mobile - show shield only */
+.logo-mobile {
+  display: block;
+}
+
+.logo-desktop {
+  display: none;
+}
+
+/* Tablet and Desktop - show full logo */
+@media (min-width: 768px) {
+  .logo-mobile {
+    display: none;
+  }
+
+  .logo-desktop {
+    display: block;
+  }
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;
