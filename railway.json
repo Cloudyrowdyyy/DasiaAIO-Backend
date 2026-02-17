@@ -1,0 +1,16 @@
+{
+  "$schema": "https://railway.json.schema",
+  "services": {
+    "backend": {
+      "dockerfile": "Dockerfile",
+      "buildCommand": "",
+      "startCommand": "/app/server",
+      "variables": {
+        "SERVER_HOST": "0.0.0.0",
+        "SERVER_PORT": "$PORT",
+        "ADMIN_CODE": "122601",
+        "RUST_LOG": "info"
+      }
+    }
+  }
+}
