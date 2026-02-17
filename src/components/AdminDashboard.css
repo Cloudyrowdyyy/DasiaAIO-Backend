@@ -184,6 +184,12 @@
   color: #333;
 }
 
+.actions-cell {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
 .users-table tbody tr:hover {
   background: #f9f9f9;
 }
@@ -241,12 +247,14 @@
 }
 
 .edit-btn {
-  background: #667eea;
+  background: #3b82f6;
   color: white;
 }
 
 .edit-btn:hover {
-  background: #764ba2;
+  background: #2563eb;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
 }
 
 .save-btn {
@@ -259,12 +267,14 @@
 }
 
 .delete-btn {
-  background: #d32f2f;
+  background: #ef4444;
   color: white;
 }
 
 .delete-btn:hover {
-  background: #b71c1c;
+  background: #dc2626;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
 }
 
 .cancel-btn {
