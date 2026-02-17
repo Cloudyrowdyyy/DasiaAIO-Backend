@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page.title | default: site.title }}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f6f8fa;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        header h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        nav {
+            background: white;
+            border-bottom: 1px solid #e1e4e8;
+            padding: 0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        
+        nav ul {
+            list-style: none;
+            display: flex;
+            flex-wrap: wrap;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        nav li {
+            border-right: 1px solid #e1e4e8;
+        }
+        
+        nav a {
+            display: block;
+            padding: 1rem 1.5rem;
+            color: #24292e;
+            text-decoration: none;
+            transition: background 0.2s;
+        }
+        
+        nav a:hover {
+            background: #f6f8fa;
+            color: #667eea;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+            background: white;
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 2rem;
+        }
+        
+        h1 { font-size: 2rem; margin: 2rem 0 1rem; border-bottom: 3px solid #667eea; padding-bottom: 0.5rem; }
+        h2 { font-size: 1.5rem; margin: 1.5rem 0 1rem; color: #24292e; }
+        h3 { font-size: 1.2rem; margin: 1.2rem 0 0.8rem; color: #333; }
+        
+        p { margin: 1rem 0; }
+        
+        code {
+            background: #f6f8fa;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+        
+        pre {
+            background: #f6f8fa;
+            border: 1px solid #e1e4e8;
+            border-radius: 6px;
+            padding: 1rem;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+        
+        pre code {
+            background: none;
+            padding: 0;
+            color: #24292e;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+        
+        table th {
+            background: #f6f8fa;
+            padding: 0.75rem;
+            text-align: left;
+            border: 1px solid #e1e4e8;
+            font-weight: 600;
+        }
+        
+        table td {
+            padding: 0.75rem;
+            border: 1px solid #e1e4e8;
+        }
+        
+        table tr:nth-child(even) {
+            background: #f6f8fa;
+        }
+        
+        a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        
+        a:hover {
+            text-decoration: underline;
+        }
+        
+        footer {
+            background: #24292e;
+            color: white;
+            text-align: center;
+            padding: 2rem 0;
+            margin-top: 3rem;
+        }
+        
+        .breadcrumb {
+            color: #666;
+            margin-bottom: 1rem;
+        }
+        
+        .breadcrumb a {
+            color: #667eea;
+        }
+        
+        @media (max-width: 600px) {
+            header h1 { font-size: 1.5rem; }
+            nav ul { flex-direction: column; }
+            nav li { border-right: none; border-bottom: 1px solid #e1e4e8; }
+            .container { margin: 1rem; padding: 1rem; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>{{ site.title }}</h1>
+            <p>{{ site.description }}</p>
+        </div>
+    </header>
+    
+    <nav>
+        <ul>
+            <li><a href="/">Home</a></li>
+            <li><a href="/capstone-1.0/docs/">Docs</a></li>
+            <li><a href="/capstone-1.0/installation/">Installation</a></li>
+            <li><a href="/capstone-1.0/api/">API</a></li>
+            <li><a href="/capstone-1.0/deployment/">Deployment</a></li>
+        </ul>
+    </nav>
+    
+    <div class="container">
+        {% if page.title != "Home" and page.title != null %}
+        <div class="breadcrumb">
+            <a href="/">Home</a> / {{ page.title }}
+        </div>
+        {% endif %}
+        
+        {{ content }}
+    </div>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2026 DASIA AIO Management System. All rights reserved.</p>
+            <p><a href="https://github.com/Cloudyrowdyyy/capstone-1.0" style="color: #667eea;">GitHub Repository</a></p>
+        </div>
+    </footer>
+</body>
+</html>
