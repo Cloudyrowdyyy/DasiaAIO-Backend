@@ -177,7 +177,7 @@ Logout       → Sign out
 
 ### Task 1: How to Edit a User
 
-1. Login as Admin (dkgagaamain@gmail.com)
+1. Login as Admin
 2. Go to Admin Dashboard
 3. Find the user in the table
 4. Click the blue **[Edit]** button
@@ -404,8 +404,8 @@ docker-compose up -d
    - Check if you see username/email at top
 
 5. **Are You Using Right Account?**
-   - Admin account for editing: dkgagaamain@gmail.com
-   - Guard account for viewing: testguard2025@gmail.com
+   - Admin account for editing: admin | admin123
+   - Guard account for viewing: user | user123
 
 ---
 
