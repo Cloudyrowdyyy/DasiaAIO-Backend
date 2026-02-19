@@ -68,6 +68,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         
         // Guard replacement routes
         .route("/api/guard-replacement/shifts", post(handlers::guard_replacement::create_shift))
+        .route("/api/guard-replacement/shifts", get(handlers::guard_replacement::get_all_shifts))
         .route("/api/guard-replacement/shifts/:guard_id", get(handlers::guard_replacement::get_guard_shifts))
         .route("/api/guard-replacement/attendance/check-in", post(handlers::guard_replacement::check_in))
         .route("/api/guard-replacement/attendance/check-out", post(handlers::guard_replacement::check_out))

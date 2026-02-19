@@ -269,4 +269,39 @@ pub async fn get_guard_attendance(
     })))
 }
 
+// Get all shifts with guard information (admin view)
+pub async fn get_all_shifts(
+    State(db): State<Arc<PgPool>>,
+) -> AppResult<Json<serde_json::Value>> {
+    #[derive(sqlx::FromRow, serde::Serialize)]
+    struct ShiftWithGuard {
+        id: String,
+        guard_id: String,
+        guard_name: Option<String>,
+        guard_username: String,
+        start_time: chrono::DateTime<chrono::Utc>,
+        end_time: chrono::DateTime<chrono::Utc>,
+        client_site: String,
+        status: String,
+        created_at: chrono::DateTime<chrono::Utc>,
+        updated_at: chrono::DateTime<chrono::Utc>,
+    }
+
+    let shifts = sqlx::query_as::<_, ShiftWithGuard>(
+        "SELECT s.id, s.guard_id, u.full_name as guard_name, u.username as guard_username, 
+         s.start_time, s.end_time, s.client_site, s.status, s.created_at, s.updated_at 
+         FROM shifts s 
+         JOIN users u ON s.guard_id = u.id 
+         ORDER BY s.start_time DESC",
+    )
+    .fetch_all(db.as_ref())
+    .await
+    .map_err(|e| AppError::DatabaseError(format!("Database error: {}", e)))?;
+
+    Ok(Json(json!({
+        "total": shifts.len(),
+        "shifts": shifts
+    })))
+}
+
 
