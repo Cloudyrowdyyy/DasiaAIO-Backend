@@ -251,3 +251,145 @@ pub struct SetAvailabilityRequest {
     pub available_from: Option<DateTime<Utc>>,
     pub available_until: Option<DateTime<Utc>>,
 }
+// Armored Car models
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct ArmoredCar {
+    pub id: String,
+    pub license_plate: String,
+    pub vin: String,
+    pub model: String,
+    pub manufacturer: String,
+    pub capacity_kg: i32,
+    pub status: String,
+    pub registration_expiry: Option<DateTime<Utc>>,
+    pub insurance_expiry: Option<DateTime<Utc>>,
+    pub last_maintenance_date: Option<DateTime<Utc>>,
+    pub mileage: i32,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CreateArmoredCarRequest {
+    pub license_plate: String,
+    pub vin: String,
+    pub model: String,
+    pub manufacturer: String,
+    pub capacity_kg: i32,
+    pub registration_expiry: Option<DateTime<Utc>>,
+    pub insurance_expiry: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateArmoredCarRequest {
+    pub status: Option<String>,
+    pub mileage: Option<i32>,
+    pub registration_expiry: Option<DateTime<Utc>>,
+    pub insurance_expiry: Option<DateTime<Utc>>,
+}
+
+// Car Allocation model
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct CarAllocation {
+    pub id: String,
+    pub car_id: String,
+    pub client_id: String,
+    pub allocation_date: DateTime<Utc>,
+    pub return_date: Option<DateTime<Utc>>,
+    pub expected_return_date: Option<DateTime<Utc>>,
+    pub status: String,
+    pub notes: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct IssueCarRequest {
+    pub car_id: String,
+    pub client_id: String,
+    pub expected_return_date: Option<DateTime<Utc>>,
+    pub notes: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ReturnCarRequest {
+    pub allocation_id: String,
+}
+
+// Car Maintenance model
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct CarMaintenance {
+    pub id: String,
+    pub car_id: String,
+    pub maintenance_type: String,
+    pub description: String,
+    pub cost: Option<String>,
+    pub scheduled_date: Option<DateTime<Utc>>,
+    pub completion_date: Option<DateTime<Utc>>,
+    pub status: String,
+    pub notes: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CreateMaintenanceRequest {
+    pub car_id: String,
+    pub maintenance_type: String,
+    pub description: String,
+    pub scheduled_date: Option<DateTime<Utc>>,
+    pub cost: Option<String>,
+}
+
+// Driver Assignment model
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct DriverAssignment {
+    pub id: String,
+    pub car_id: String,
+    pub guard_id: String,
+    pub assignment_date: DateTime<Utc>,
+    pub end_date: Option<DateTime<Utc>>,
+    pub status: String,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct AssignDriverRequest {
+    pub car_id: String,
+    pub guard_id: String,
+}
+
+// Trip model
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct Trip {
+    pub id: String,
+    pub car_id: String,
+    pub driver_id: String,
+    pub allocation_id: Option<String>,
+    pub start_location: String,
+    pub end_location: Option<String>,
+    pub start_time: DateTime<Utc>,
+    pub end_time: Option<DateTime<Utc>>,
+    pub distance_km: Option<String>,
+    pub status: String,
+    pub mission_details: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CreateTripRequest {
+    pub car_id: String,
+    pub driver_id: String,
+    pub allocation_id: Option<String>,
+    pub start_location: String,
+    pub mission_details: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct EndTripRequest {
+    pub trip_id: String,
+    pub end_location: String,
+    pub distance_km: Option<String>,
+}

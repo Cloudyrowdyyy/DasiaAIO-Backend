@@ -133,5 +133,122 @@ pub async fn run_migrations(pool: &PgPool) -> AppResult<()> {
     .await
     .map_err(|e| AppError::DatabaseError(format!("Failed to create attendance table: {}", e)))?;
 
+    // Create armored_cars table
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS armored_cars (
+            id VARCHAR(36) PRIMARY KEY,
+            license_plate VARCHAR(50) NOT NULL UNIQUE,
+            vin VARCHAR(100) NOT NULL UNIQUE,
+            model VARCHAR(255) NOT NULL,
+            manufacturer VARCHAR(255) NOT NULL,
+            capacity_kg INTEGER NOT NULL,
+            status VARCHAR(50) NOT NULL DEFAULT 'available',
+            registration_expiry TIMESTAMP WITH TIME ZONE,
+            insurance_expiry TIMESTAMP WITH TIME ZONE,
+            last_maintenance_date TIMESTAMP WITH TIME ZONE,
+            mileage INTEGER DEFAULT 0,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        )
+        "#,
+    )
+    .execute(pool)
+    .await
+    .map_err(|e| AppError::DatabaseError(format!("Failed to create armored_cars table: {}", e)))?;
+
+    // Create car_allocations table
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS car_allocations (
+            id VARCHAR(36) PRIMARY KEY,
+            car_id VARCHAR(36) NOT NULL,
+            client_id VARCHAR(255) NOT NULL,
+            allocation_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            return_date TIMESTAMP WITH TIME ZONE,
+            expected_return_date TIMESTAMP WITH TIME ZONE,
+            status VARCHAR(50) NOT NULL DEFAULT 'active',
+            notes VARCHAR(1000),
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (car_id) REFERENCES armored_cars(id) ON DELETE CASCADE
+        )
+        "#,
+    )
+    .execute(pool)
+    .await
+    .map_err(|e| AppError::DatabaseError(format!("Failed to create car_allocations table: {}", e)))?;
+
+    // Create car_maintenance table
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS car_maintenance (
+            id VARCHAR(36) PRIMARY KEY,
+            car_id VARCHAR(36) NOT NULL,
+            maintenance_type VARCHAR(100) NOT NULL,
+            description VARCHAR(1000) NOT NULL,
+            cost DECIMAL(10, 2),
+            scheduled_date TIMESTAMP WITH TIME ZONE,
+            completion_date TIMESTAMP WITH TIME ZONE,
+            status VARCHAR(50) NOT NULL DEFAULT 'scheduled',
+            notes VARCHAR(1000),
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (car_id) REFERENCES armored_cars(id) ON DELETE CASCADE
+        )
+        "#,
+    )
+    .execute(pool)
+    .await
+    .map_err(|e| AppError::DatabaseError(format!("Failed to create car_maintenance table: {}", e)))?;
+
+    // Create driver_assignments table
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS driver_assignments (
+            id VARCHAR(36) PRIMARY KEY,
+            car_id VARCHAR(36) NOT NULL,
+            guard_id VARCHAR(36) NOT NULL,
+            assignment_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            end_date TIMESTAMP WITH TIME ZONE,
+            status VARCHAR(50) NOT NULL DEFAULT 'active',
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (car_id) REFERENCES armored_cars(id) ON DELETE CASCADE,
+            FOREIGN KEY (guard_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+        "#,
+    )
+    .execute(pool)
+    .await
+    .map_err(|e| AppError::DatabaseError(format!("Failed to create driver_assignments table: {}", e)))?;
+
+    // Create trips table
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS trips (
+            id VARCHAR(36) PRIMARY KEY,
+            car_id VARCHAR(36) NOT NULL,
+            driver_id VARCHAR(36) NOT NULL,
+            allocation_id VARCHAR(36),
+            start_location VARCHAR(500) NOT NULL,
+            end_location VARCHAR(500),
+            start_time TIMESTAMP WITH TIME ZONE NOT NULL,
+            end_time TIMESTAMP WITH TIME ZONE,
+            distance_km DECIMAL(10, 2),
+            status VARCHAR(50) NOT NULL DEFAULT 'in_transit',
+            mission_details VARCHAR(1000),
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (car_id) REFERENCES armored_cars(id) ON DELETE CASCADE,
+            FOREIGN KEY (driver_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (allocation_id) REFERENCES car_allocations(id) ON DELETE SET NULL
+        )
+        "#,
+    )
+    .execute(pool)
+    .await
+    .map_err(|e| AppError::DatabaseError(format!("Failed to create trips table: {}", e)))?;
+
     Ok(())
 }

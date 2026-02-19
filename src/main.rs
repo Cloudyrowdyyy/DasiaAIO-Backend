@@ -74,6 +74,35 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/guard-replacement/request-replacement", post(handlers::guard_replacement::request_replacement))
         .route("/api/guard-replacement/set-availability", post(handlers::guard_replacement::set_availability))
         
+        // Armored car routes
+        .route("/api/armored-cars", post(handlers::armored_cars::add_armored_car))
+        .route("/api/armored-cars", get(handlers::armored_cars::get_all_armored_cars))
+        .route("/api/armored-cars/:id", get(handlers::armored_cars::get_armored_car_by_id))
+        .route("/api/armored-cars/:id", put(handlers::armored_cars::update_armored_car))
+        .route("/api/armored-cars/:id", delete(handlers::armored_cars::delete_armored_car))
+        
+        // Car allocation routes
+        .route("/api/car-allocation/issue", post(handlers::armored_cars::issue_car))
+        .route("/api/car-allocation/return", post(handlers::armored_cars::return_car))
+        .route("/api/car-allocations/:car_id", get(handlers::armored_cars::get_car_allocations))
+        .route("/api/car-allocations/active", get(handlers::armored_cars::get_active_car_allocations))
+        
+        // Car maintenance routes
+        .route("/api/car-maintenance/schedule", post(handlers::armored_cars::schedule_maintenance))
+        .route("/api/car-maintenance/:maintenance_id/complete", post(handlers::armored_cars::complete_maintenance))
+        .route("/api/car-maintenance/:car_id", get(handlers::armored_cars::get_car_maintenance_records))
+        
+        // Driver assignment routes
+        .route("/api/driver-assignment/assign", post(handlers::armored_cars::assign_driver))
+        .route("/api/driver-assignment/:assignment_id/unassign", post(handlers::armored_cars::unassign_driver))
+        .route("/api/car-drivers/:car_id", get(handlers::armored_cars::get_car_drivers))
+        
+        // Trip management routes
+        .route("/api/trips", post(handlers::armored_cars::create_trip))
+        .route("/api/trips/end", post(handlers::armored_cars::end_trip))
+        .route("/api/trips/car/:car_id", get(handlers::armored_cars::get_car_trips))
+        .route("/api/trips", get(handlers::armored_cars::get_all_trips))
+        
         // Health check
         .route("/api/health", get(handlers::health::health_check))
         
