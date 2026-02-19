@@ -68,11 +68,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         
         // Guard replacement routes
         .route("/api/guard-replacement/shifts", post(handlers::guard_replacement::create_shift))
+        .route("/api/guard-replacement/shifts/:guard_id", get(handlers::guard_replacement::get_guard_shifts))
         .route("/api/guard-replacement/attendance/check-in", post(handlers::guard_replacement::check_in))
         .route("/api/guard-replacement/attendance/check-out", post(handlers::guard_replacement::check_out))
+        .route("/api/attendance/:guard_id", get(handlers::guard_replacement::get_guard_attendance))
         .route("/api/guard-replacement/detect-no-shows", post(handlers::guard_replacement::detect_no_shows))
         .route("/api/guard-replacement/request-replacement", post(handlers::guard_replacement::request_replacement))
         .route("/api/guard-replacement/set-availability", post(handlers::guard_replacement::set_availability))
+
+        // Guard permits routes
+        .route("/api/guard-firearm-permits", post(handlers::permits::create_guard_permit))
+        .route("/api/guard-firearm-permits/:guard_id", get(handlers::permits::get_guard_permits))
+
+        // Support tickets routes
+        .route("/api/support-tickets", post(handlers::support_tickets::create_ticket))
+        .route("/api/support-tickets/:guard_id", get(handlers::support_tickets::get_guard_tickets))
         
         // Armored car routes
         .route("/api/armored-cars", post(handlers::armored_cars::add_armored_car))

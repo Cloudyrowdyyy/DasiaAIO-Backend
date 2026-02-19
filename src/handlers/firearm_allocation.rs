@@ -9,7 +9,7 @@ use serde_json::json;
 
 use crate::{
     error::{AppError, AppResult},
-    models::{IssueFirearmRequest, ReturnFirearmRequest, FirearmAllocation},
+    models::{FirearmAllocation, GuardAllocationView, IssueFirearmRequest, ReturnFirearmRequest},
     utils,
 };
 
@@ -115,8 +115,15 @@ pub async fn get_guard_allocations(
     State(db): State<Arc<PgPool>>,
     Path(guard_id): Path<String>,
 ) -> AppResult<Json<serde_json::Value>> {
-    let allocations = sqlx::query_as::<_, FirearmAllocation>(
-        "SELECT id, guard_id, firearm_id, allocation_date, return_date, status, created_at, updated_at FROM firearm_allocations WHERE guard_id = $1 AND status = 'active'"
+    let allocations = sqlx::query_as::<_, GuardAllocationView>(
+        r#"
+        SELECT fa.id, fa.guard_id, fa.firearm_id, fa.allocation_date, fa.return_date, fa.status, fa.created_at, fa.updated_at,
+               f.model AS firearm_model, f.caliber AS firearm_caliber, f.serial_number AS firearm_serial_number
+        FROM firearm_allocations fa
+        JOIN firearms f ON f.id = fa.firearm_id
+        WHERE fa.guard_id = $1 AND fa.status = 'active'
+        ORDER BY fa.allocation_date DESC
+        "#,
     )
     .bind(&guard_id)
     .fetch_all(db.as_ref())

@@ -393,3 +393,62 @@ pub struct EndTripRequest {
     pub end_location: String,
     pub distance_km: Option<String>,
 }
+
+// Guard permit model
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct GuardFirearmPermit {
+    pub id: String,
+    pub guard_id: String,
+    pub firearm_id: Option<String>,
+    pub permit_type: String,
+    pub issued_date: DateTime<Utc>,
+    pub expiry_date: DateTime<Utc>,
+    pub status: String,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CreateGuardFirearmPermitRequest {
+    pub guard_id: String,
+    pub firearm_id: Option<String>,
+    pub permit_type: String,
+    pub issued_date: DateTime<Utc>,
+    pub expiry_date: DateTime<Utc>,
+    pub status: Option<String>,
+}
+
+// Guard allocation view with firearm details
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct GuardAllocationView {
+    pub id: String,
+    pub guard_id: String,
+    pub firearm_id: String,
+    pub allocation_date: DateTime<Utc>,
+    pub return_date: Option<DateTime<Utc>>,
+    pub status: String,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub firearm_model: String,
+    pub firearm_caliber: String,
+    pub firearm_serial_number: String,
+}
+
+// Support ticket model
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct SupportTicket {
+    pub id: String,
+    pub guard_id: String,
+    pub subject: String,
+    pub message: String,
+    pub status: String,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CreateSupportTicketRequest {
+    pub guard_id: String,
+    pub subject: String,
+    pub message: String,
+}

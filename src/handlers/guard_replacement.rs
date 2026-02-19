@@ -1,5 +1,5 @@
 use axum::{
-    extract::State,
+    extract::{Path, State},
     http::StatusCode,
     Json,
 };
@@ -9,7 +9,10 @@ use serde_json::json;
 
 use crate::{
     error::{AppError, AppResult},
-    models::{CreateShiftRequest, CheckInRequest, CheckOutRequest, RequestReplacementRequest, SetAvailabilityRequest},
+    models::{
+        Attendance, CheckInRequest, CheckOutRequest, CreateShiftRequest, RequestReplacementRequest,
+        SetAvailabilityRequest, Shift,
+    },
     utils,
 };
 
@@ -227,6 +230,42 @@ pub async fn set_availability(
 
     Ok(Json(json!({
         "message": "Guard availability updated successfully"
+    })))
+}
+
+pub async fn get_guard_shifts(
+    State(db): State<Arc<PgPool>>,
+    Path(guard_id): Path<String>,
+) -> AppResult<Json<serde_json::Value>> {
+    let shifts = sqlx::query_as::<_, Shift>(
+        "SELECT id, guard_id, start_time, end_time, client_site, status, created_at, updated_at FROM shifts WHERE guard_id = $1 ORDER BY start_time DESC",
+    )
+    .bind(&guard_id)
+    .fetch_all(db.as_ref())
+    .await
+    .map_err(|e| AppError::DatabaseError(format!("Database error: {}", e)))?;
+
+    Ok(Json(json!({
+        "total": shifts.len(),
+        "shifts": shifts
+    })))
+}
+
+pub async fn get_guard_attendance(
+    State(db): State<Arc<PgPool>>,
+    Path(guard_id): Path<String>,
+) -> AppResult<Json<serde_json::Value>> {
+    let attendance = sqlx::query_as::<_, Attendance>(
+        "SELECT id, guard_id, shift_id, check_in_time, check_out_time, status, created_at, updated_at FROM attendance WHERE guard_id = $1 ORDER BY check_in_time DESC",
+    )
+    .bind(&guard_id)
+    .fetch_all(db.as_ref())
+    .await
+    .map_err(|e| AppError::DatabaseError(format!("Database error: {}", e)))?;
+
+    Ok(Json(json!({
+        "total": attendance.len(),
+        "attendance": attendance
     })))
 }
 

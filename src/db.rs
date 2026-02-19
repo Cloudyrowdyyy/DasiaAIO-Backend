@@ -250,5 +250,46 @@ pub async fn run_migrations(pool: &PgPool) -> AppResult<()> {
     .await
     .map_err(|e| AppError::DatabaseError(format!("Failed to create trips table: {}", e)))?;
 
+    // Create guard_firearm_permits table
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS guard_firearm_permits (
+            id VARCHAR(36) PRIMARY KEY,
+            guard_id VARCHAR(36) NOT NULL,
+            firearm_id VARCHAR(36),
+            permit_type VARCHAR(100) NOT NULL,
+            issued_date TIMESTAMP WITH TIME ZONE NOT NULL,
+            expiry_date TIMESTAMP WITH TIME ZONE NOT NULL,
+            status VARCHAR(50) NOT NULL DEFAULT 'active',
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (guard_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (firearm_id) REFERENCES firearms(id) ON DELETE SET NULL
+        )
+        "#,
+    )
+    .execute(pool)
+    .await
+    .map_err(|e| AppError::DatabaseError(format!("Failed to create guard_firearm_permits table: {}", e)))?;
+
+    // Create support_tickets table
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS support_tickets (
+            id VARCHAR(36) PRIMARY KEY,
+            guard_id VARCHAR(36) NOT NULL,
+            subject VARCHAR(255) NOT NULL,
+            message TEXT NOT NULL,
+            status VARCHAR(50) NOT NULL DEFAULT 'open',
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (guard_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+        "#,
+    )
+    .execute(pool)
+    .await
+    .map_err(|e| AppError::DatabaseError(format!("Failed to create support_tickets table: {}", e)))?;
+
     Ok(())
 }
