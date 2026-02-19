@@ -1,0 +1,24 @@
+{
+  "name": "dasiaaio-backend",
+  "version": "1.0.0",
+  "description": "- Rust 1.70+ (install from https://rustup.rs/)\r - PostgreSQL 12+\r - Git",
+  "main": "seed.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Cloudyrowdyyy/DasiaAIO-Backend.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Cloudyrowdyyy/DasiaAIO-Backend/issues"
+  },
+  "homepage": "https://github.com/Cloudyrowdyyy/DasiaAIO-Backend#readme",
+  "dependencies": {
+    "pg": "^8.18.0"
+  }
+}
