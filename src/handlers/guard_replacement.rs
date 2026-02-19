@@ -304,4 +304,72 @@ pub async fn get_all_shifts(
     })))
 }
 
+// Update existing shift
+pub async fn update_shift(
+    State(db): State<Arc<PgPool>>,
+    Path(shift_id): Path<String>,
+    Json(payload): Json<CreateShiftRequest>,
+) -> AppResult<Json<serde_json::Value>> {
+    // Check if shift exists
+    sqlx::query("SELECT id FROM shifts WHERE id = $1")
+        .bind(&shift_id)
+        .fetch_optional(db.as_ref())
+        .await
+        .map_err(|e| AppError::DatabaseError(format!("Database error: {}", e)))?
+        .ok_or_else(|| AppError::NotFound("Shift not found".to_string()))?;
+
+    // Parse datetime strings
+    let start_time = chrono::DateTime::parse_from_rfc3339(&payload.start_time)
+        .ok()
+        .map(|dt| dt.with_timezone(&chrono::Utc))
+        .ok_or_else(|| AppError::BadRequest("Invalid start_time format".to_string()))?;
+    
+    let end_time = chrono::DateTime::parse_from_rfc3339(&payload.end_time)
+        .ok()
+        .map(|dt| dt.with_timezone(&chrono::Utc))
+        .ok_or_else(|| AppError::BadRequest("Invalid end_time format".to_string()))?;
+
+    sqlx::query(
+        "UPDATE shifts SET guard_id = $1, start_time = $2, end_time = $3, client_site = $4, updated_at = CURRENT_TIMESTAMP WHERE id = $5"
+    )
+    .bind(&payload.guard_id)
+    .bind(start_time)
+    .bind(end_time)
+    .bind(&payload.client_site)
+    .bind(&shift_id)
+    .execute(db.as_ref())
+    .await
+    .map_err(|e| AppError::DatabaseError(format!("Failed to update shift: {}", e)))?;
+
+    Ok(Json(json!({
+        "message": "Shift updated successfully",
+        "shiftId": shift_id
+    })))
+}
+
+// Delete shift
+pub async fn delete_shift(
+    State(db): State<Arc<PgPool>>,
+    Path(shift_id): Path<String>,
+) -> AppResult<Json<serde_json::Value>> {
+    // Check if shift exists
+    sqlx::query("SELECT id FROM shifts WHERE id = $1")
+        .bind(&shift_id)
+        .fetch_optional(db.as_ref())
+        .await
+        .map_err(|e| AppError::DatabaseError(format!("Database error: {}", e)))?
+        .ok_or_else(|| AppError::NotFound("Shift not found".to_string()))?;
+
+    // Delete shift
+    sqlx::query("DELETE FROM shifts WHERE id = $1")
+        .bind(&shift_id)
+        .execute(db.as_ref())
+        .await
+        .map_err(|e| AppError::DatabaseError(format!("Failed to delete shift: {}", e)))?;
+
+    Ok(Json(json!({
+        "message": "Shift deleted successfully"
+    })))
+}
+
 

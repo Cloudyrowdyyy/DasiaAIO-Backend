@@ -7,4 +7,7 @@ pub mod health;
 pub mod armored_cars;
 pub mod permits;
 pub mod support_tickets;
+pub mod missions;
+pub mod analytics;
+pub mod trip_management;
 

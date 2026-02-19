@@ -69,13 +69,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Guard replacement routes
         .route("/api/guard-replacement/shifts", post(handlers::guard_replacement::create_shift))
         .route("/api/guard-replacement/shifts", get(handlers::guard_replacement::get_all_shifts))
-        .route("/api/guard-replacement/shifts/:guard_id", get(handlers::guard_replacement::get_guard_shifts))
+        .route("/api/guard-replacement/shifts/:shift_id", put(handlers::guard_replacement::update_shift))
+        .route("/api/guard-replacement/shifts/:shift_id", delete(handlers::guard_replacement::delete_shift))
+        .route("/api/guard-replacement/guard/:guard_id/shifts", get(handlers::guard_replacement::get_guard_shifts))
         .route("/api/guard-replacement/attendance/check-in", post(handlers::guard_replacement::check_in))
         .route("/api/guard-replacement/attendance/check-out", post(handlers::guard_replacement::check_out))
         .route("/api/attendance/:guard_id", get(handlers::guard_replacement::get_guard_attendance))
         .route("/api/guard-replacement/detect-no-shows", post(handlers::guard_replacement::detect_no_shows))
         .route("/api/guard-replacement/request-replacement", post(handlers::guard_replacement::request_replacement))
         .route("/api/guard-replacement/set-availability", post(handlers::guard_replacement::set_availability))
+
+        // Mission assignment routes (Integrated Workflow)
+        .route("/api/missions/assign", post(handlers::missions::assign_mission))
+        .route("/api/missions", get(handlers::missions::get_missions))
 
         // Guard permits routes
         .route("/api/guard-firearm-permits", post(handlers::permits::create_guard_permit))
@@ -113,6 +119,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/trips/end", post(handlers::armored_cars::end_trip))
         .route("/api/trips/car/:car_id", get(handlers::armored_cars::get_car_trips))
         .route("/api/trips", get(handlers::armored_cars::get_all_trips))
+        
+        // Enhanced trip management routes
+        .route("/api/trip-management/active", get(handlers::trip_management::get_active_trips))
+        .route("/api/trip-management/:trip_id", get(handlers::trip_management::get_trip_details))
+        .route("/api/trip-management/:trip_id/status", put(handlers::trip_management::update_trip_status))
+        .route("/api/trip-management/assign-driver", post(handlers::trip_management::assign_driver_to_trip))
+        .route("/api/trip-management/driver-assignments", get(handlers::trip_management::get_driver_assignments))
+        
+        // Analytics routes
+        .route("/api/analytics", get(handlers::analytics::get_analytics))
+        .route("/api/analytics/trends", get(handlers::analytics::get_performance_trends))
+        .route("/api/analytics/mission-status", put(handlers::analytics::update_mission_status))
         
         // Health check
         .route("/api/health", get(handlers::health::health_check))
