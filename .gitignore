@@ -6,3 +6,12 @@ Cargo.lock
 .vscode/
 *.swp
 *.swo
+
+# Node.js
+node_modules/
+package-lock.json
+
+# Database scripts (project-specific)
+restore_accounts.sql
+setup_credentials.sql
+test_connection.js
