@@ -9,9 +9,8 @@ Cargo.lock
 
 # Node.js
 node_modules/
-package-lock.json
 
-# Database scripts (project-specific)
+# Database scripts (project-specific, for local testing only)
 restore_accounts.sql
 setup_credentials.sql
 test_connection.js
