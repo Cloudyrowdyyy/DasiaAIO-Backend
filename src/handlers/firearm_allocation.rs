@@ -152,4 +152,19 @@ pub async fn get_active_allocations(
     })))
 }
 
+pub async fn get_all_allocations(
+    State(db): State<Arc<PgPool>>,
+) -> AppResult<Json<serde_json::Value>> {
+    let allocations = sqlx::query_as::<_, FirearmAllocation>(
+        "SELECT id, guard_id, firearm_id, allocation_date, return_date, status, created_at, updated_at FROM firearm_allocations ORDER BY allocation_date DESC"
+    )
+    .fetch_all(db.as_ref())
+    .await
+    .map_err(|e| AppError::DatabaseError(format!("Database error: {}", e)))?;
+
+    Ok(Json(json!({
+        "total": allocations.len(),
+        "allocations": allocations
+    })))
+}
 

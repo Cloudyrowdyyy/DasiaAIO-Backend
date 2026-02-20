@@ -65,6 +65,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/firearm-allocation/return", post(handlers::firearm_allocation::return_firearm))
         .route("/api/guard-allocations/:guard_id", get(handlers::firearm_allocation::get_guard_allocations))
         .route("/api/firearm-allocations/active", get(handlers::firearm_allocation::get_active_allocations))
+        .route("/api/firearm-allocations", get(handlers::firearm_allocation::get_all_allocations))
+        
+        // Firearm maintenance routes
+        .route("/api/firearm-maintenance", get(handlers::firearms::get_firearm_maintenance))
         
         // Guard replacement routes
         .route("/api/guard-replacement/shifts", post(handlers::guard_replacement::create_shift))
@@ -85,6 +89,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         // Guard permits routes
         .route("/api/guard-firearm-permits", post(handlers::permits::create_guard_permit))
+        .route("/api/guard-firearm-permits", get(handlers::permits::get_all_permits))
         .route("/api/guard-firearm-permits/:guard_id", get(handlers::permits::get_guard_permits))
 
         // Support tickets routes

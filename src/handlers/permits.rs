@@ -66,3 +66,19 @@ pub async fn create_guard_permit(
         })),
     ))
 }
+
+pub async fn get_all_permits(
+    State(db): State<Arc<PgPool>>,
+) -> AppResult<Json<serde_json::Value>> {
+    let permits = sqlx::query_as::<_, GuardFirearmPermit>(
+        "SELECT id, guard_id, firearm_id, permit_type, issued_date, expiry_date, status, created_at, updated_at FROM guard_firearm_permits ORDER BY issued_date DESC",
+    )
+    .fetch_all(db.as_ref())
+    .await
+    .map_err(|e| AppError::DatabaseError(format!("Database error: {}", e)))?;
+
+    Ok(Json(json!({
+        "total": permits.len(),
+        "permits": permits
+    })))
+}
