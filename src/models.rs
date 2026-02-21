@@ -50,6 +50,7 @@ pub struct User {
     pub phone_number: String,
     pub license_number: Option<String>,
     pub license_expiry_date: Option<DateTime<Utc>>,
+    pub profile_photo: Option<String>,
     pub verified: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -57,6 +58,7 @@ pub struct User {
 
 // User creation request
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CreateUserRequest {
     pub email: String,
     pub password: String,
@@ -78,6 +80,7 @@ pub struct UserResponse {
     pub role: String,
     pub full_name: String,
     pub phone_number: String,
+    pub profile_photo: Option<String>,
 }
 
 impl From<User> for UserResponse {
@@ -89,6 +92,7 @@ impl From<User> for UserResponse {
             role: user.role,
             full_name: user.full_name,
             phone_number: user.phone_number,
+            profile_photo: user.profile_photo,
         }
     }
 }

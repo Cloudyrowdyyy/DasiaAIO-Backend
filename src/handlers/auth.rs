@@ -107,7 +107,14 @@ pub async fn register(
 
     // Send email (you'll need email config from environment/state)
     // For now, just log it
-    tracing::info!("Verification code for {}: {}", payload.email, confirmation_code);
+    let gmail_user = std::env::var("GMAIL_USER").unwrap_or_else(|_| "no-reply@example.com".to_string());
+    let gmail_password = std::env::var("GMAIL_PASSWORD").unwrap_or_else(|_| "dummy-password".to_string());
+    utils::send_confirmation_email(
+        &gmail_user,
+        &gmail_password,
+        &payload.email,
+        &confirmation_code,
+    ).await?;
 
     Ok((
         StatusCode::CREATED,
@@ -215,7 +222,14 @@ pub async fn resend_verification_code(
     .await
     .map_err(|e| AppError::DatabaseError(format!("Database error: {}", e)))?;
 
-    tracing::info!("New verification code for {}: {}", payload.email, confirmation_code);
+    let gmail_user = std::env::var("GMAIL_USER").unwrap_or_else(|_| "no-reply@example.com".to_string());
+    let gmail_password = std::env::var("GMAIL_PASSWORD").unwrap_or_else(|_| "dummy-password".to_string());
+    utils::send_confirmation_email(
+        &gmail_user,
+        &gmail_password,
+        &payload.email,
+        &confirmation_code,
+    ).await?;
 
     Ok(Json(json!({
         "message": "Verification code resent to your email"
@@ -234,7 +248,7 @@ pub async fn login(
 
     // Find user by email, username, or phone
     let user = sqlx::query(
-        r#"SELECT id, email, username, password, role, full_name, phone_number, verified FROM users 
+        r#"SELECT id, email, username, password, role, full_name, phone_number, license_number, license_expiry_date, profile_photo, verified, created_at, updated_at FROM users 
            WHERE email = $1 OR username = $1 OR phone_number = $1"#
     )
     .bind(&payload.identifier)
@@ -264,6 +278,8 @@ pub async fn login(
     let role: String = user.try_get("role").unwrap();
     let full_name: Option<String> = user.try_get("full_name").ok();
     let phone_number: Option<String> = user.try_get("phone_number").ok();
+    let license_number: Option<String> = user.try_get("license_number").ok();
+    let profile_photo: Option<String> = user.try_get("profile_photo").ok();
 
     Ok(Json(json!({
         "message": "Login successful",
@@ -273,9 +289,12 @@ pub async fn login(
             "username": username,
             "role": role,
             "fullName": full_name,
-            "phoneNumber": phone_number
+            "phoneNumber": phone_number,
+            "licenseNumber": license_number,
+            "profilePhoto": profile_photo,
         }
     })))
 }
+
 
 

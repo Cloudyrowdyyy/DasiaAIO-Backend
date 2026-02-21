@@ -49,6 +49,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         
         // User routes
         .route("/api/users", get(handlers::users::get_all_users))
+        .route("/api/user/:id/profile-photo", put(handlers::users::update_profile_photo))
+        .route("/api/user/:id/profile-photo", delete(handlers::users::delete_profile_photo))
         .route("/api/user/:id", get(handlers::users::get_user_by_id))
         .route("/api/user/:id", put(handlers::users::update_user))
         .route("/api/user/:id", delete(handlers::users::delete_user))

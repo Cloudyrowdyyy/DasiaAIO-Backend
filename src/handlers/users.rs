@@ -16,7 +16,7 @@ pub async fn get_all_users(
     State(db): State<Arc<PgPool>>,
 ) -> AppResult<Json<serde_json::Value>> {
     let users = sqlx::query_as::<_, User>(
-        "SELECT id, email, username, password, role, full_name, phone_number, license_number, license_expiry_date, verified, created_at, updated_at FROM users"
+        "SELECT id, email, username, password, role, full_name, phone_number, license_number, license_expiry_date, profile_photo, verified, created_at, updated_at FROM users"
     )
     .fetch_all(db.as_ref())
     .await
@@ -35,7 +35,7 @@ pub async fn get_user_by_id(
     Path(id): Path<String>,
 ) -> AppResult<Json<UserResponse>> {
     let user = sqlx::query_as::<_, User>(
-        "SELECT id, email, username, password, role, full_name, phone_number, license_number, license_expiry_date, verified, created_at, updated_at FROM users WHERE id = $1"
+        "SELECT id, email, username, password, role, full_name, phone_number, license_number, license_expiry_date, profile_photo, verified, created_at, updated_at FROM users WHERE id = $1"
     )
     .bind(&id)
     .fetch_optional(db.as_ref())
@@ -61,6 +61,7 @@ pub async fn update_user(
 
     let full_name = payload.get("fullName").and_then(|v| v.as_str());
     let phone_number = payload.get("phoneNumber").and_then(|v| v.as_str());
+    let email = payload.get("email").and_then(|v| v.as_str());
     let license_number = payload.get("licenseNumber").and_then(|v| v.as_str());
     let license_expiry_date = payload.get("licenseExpiryDate").and_then(|v| v.as_str());
 
@@ -70,6 +71,17 @@ pub async fn update_user(
             "UPDATE users SET full_name = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2"
         )
         .bind(full_name)
+        .bind(&id)
+        .execute(db.as_ref())
+        .await
+        .map_err(|e| AppError::DatabaseError(format!("Database error: {}", e)))?;
+    }
+
+    if let Some(email) = email {
+        sqlx::query(
+            "UPDATE users SET email = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2"
+        )
+        .bind(email)
         .bind(&id)
         .execute(db.as_ref())
         .await
@@ -143,4 +155,68 @@ pub async fn delete_user(
     })))
 }
 
+pub async fn update_profile_photo(
+    State(db): State<Arc<PgPool>>,
+    Path(id): Path<String>,
+    Json(payload): Json<serde_json::Value>,
+) -> AppResult<Json<serde_json::Value>> {
+    // Check if user exists
+    sqlx::query("SELECT id FROM users WHERE id = $1")
+        .bind(&id)
+        .fetch_optional(db.as_ref())
+        .await
+        .map_err(|e| AppError::DatabaseError(format!("Database error: {}", e)))?
+        .ok_or_else(|| AppError::NotFound("User not found".to_string()))?;
+
+    let profile_photo = payload.get("profilePhoto")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| AppError::BadRequest("Missing profilePhoto field".to_string()))?;
+
+    // Validate base64 format
+    if !profile_photo.starts_with("data:image/") {
+        return Err(AppError::BadRequest("Invalid image format".to_string()));
+    }
+
+    tracing::info!("Updating profile photo for user: {}", id);
+
+    sqlx::query(
+        "UPDATE users SET profile_photo = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2"
+    )
+    .bind(profile_photo)
+    .bind(&id)
+    .execute(db.as_ref())
+    .await
+    .map_err(|e| AppError::DatabaseError(format!("Database error: {}", e)))?;
+
+    tracing::info!("Profile photo updated successfully for user: {}", id);
+
+    Ok(Json(json!({
+        "message": "Profile photo updated successfully"
+    })))
+}
+
+pub async fn delete_profile_photo(
+    State(db): State<Arc<PgPool>>,
+    Path(id): Path<String>,
+) -> AppResult<Json<serde_json::Value>> {
+    // Check if user exists
+    sqlx::query("SELECT id FROM users WHERE id = $1")
+        .bind(&id)
+        .fetch_optional(db.as_ref())
+        .await
+        .map_err(|e| AppError::DatabaseError(format!("Database error: {}", e)))?
+        .ok_or_else(|| AppError::NotFound("User not found".to_string()))?;
+
+    sqlx::query(
+        "UPDATE users SET profile_photo = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = $1"
+    )
+    .bind(&id)
+    .execute(db.as_ref())
+    .await
+    .map_err(|e| AppError::DatabaseError(format!("Database error: {}", e)))?;
+
+    Ok(Json(json!({
+        "message": "Profile photo removed successfully"
+    })))
+}
 
