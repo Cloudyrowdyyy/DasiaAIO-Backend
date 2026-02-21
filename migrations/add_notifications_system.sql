@@ -7,8 +7,8 @@ CREATE TABLE IF NOT EXISTS notifications (
     type TEXT NOT NULL DEFAULT 'info', -- 'info', 'warning', 'success', 'replacement_request'
     related_shift_id TEXT,
     read BOOLEAN NOT NULL DEFAULT FALSE,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
@@ -20,11 +20,11 @@ CREATE TABLE IF NOT EXISTS guard_availability (
     id TEXT PRIMARY KEY,
     guard_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     available BOOLEAN NOT NULL DEFAULT TRUE,
-    available_from TIMESTAMP,
-    available_to TIMESTAMP,
+    available_from TIMESTAMPTZ,
+    available_to TIMESTAMPTZ,
     notes TEXT,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_guard_availability_guard_id ON guard_availability(guard_id);

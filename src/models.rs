@@ -140,6 +140,7 @@ pub struct Firearm {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CreateFirearmRequest {
     pub serial_number: String,
     pub model: String,
@@ -148,6 +149,7 @@ pub struct CreateFirearmRequest {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct UpdateFirearmRequest {
     pub status: Option<String>,
     pub caliber: Option<String>,
@@ -167,6 +169,7 @@ pub struct FirearmAllocation {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct IssueFirearmRequest {
     pub firearm_id: String,
     pub guard_id: String,
@@ -223,6 +226,7 @@ pub struct Shift {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CreateShiftRequest {
     pub guard_id: String,
     pub start_time: String,
@@ -231,17 +235,20 @@ pub struct CreateShiftRequest {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CheckInRequest {
     pub guard_id: String,
     pub shift_id: String,
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CheckOutRequest {
     pub attendance_id: String,
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct RequestReplacementRequest {
     pub original_guard_id: String,
     pub replacement_guard_id: String,
@@ -276,6 +283,7 @@ pub struct ArmoredCar {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CreateArmoredCarRequest {
     pub license_plate: String,
     pub vin: String,
@@ -287,6 +295,7 @@ pub struct CreateArmoredCarRequest {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct UpdateArmoredCarRequest {
     pub status: Option<String>,
     pub mileage: Option<i32>,
@@ -310,6 +319,7 @@ pub struct CarAllocation {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct IssueCarRequest {
     pub car_id: String,
     pub client_id: String,
@@ -318,6 +328,7 @@ pub struct IssueCarRequest {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ReturnCarRequest {
     pub allocation_id: String,
 }
@@ -339,6 +350,7 @@ pub struct CarMaintenance {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CreateMaintenanceRequest {
     pub car_id: String,
     pub maintenance_type: String,
@@ -361,6 +373,7 @@ pub struct DriverAssignment {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AssignDriverRequest {
     pub car_id: String,
     pub guard_id: String,
@@ -385,6 +398,7 @@ pub struct Trip {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CreateTripRequest {
     pub car_id: String,
     pub driver_id: String,
@@ -394,6 +408,7 @@ pub struct CreateTripRequest {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct EndTripRequest {
     pub trip_id: String,
     pub end_location: String,

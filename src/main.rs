@@ -46,6 +46,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/login", post(handlers::auth::login))
         .route("/api/verify", post(handlers::auth::verify_email))
         .route("/api/resend-code", post(handlers::auth::resend_verification_code))
+        // Auth routes with /auth prefix (alternative URIs)
+        .route("/api/auth/register", post(handlers::auth::register))
+        .route("/api/auth/login", post(handlers::auth::login))
+        .route("/api/auth/verify", post(handlers::auth::verify_email))
+        .route("/api/auth/resend-code", post(handlers::auth::resend_verification_code))
         
         // User routes
         .route("/api/users", get(handlers::users::get_all_users))
@@ -54,6 +59,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/user/:id", get(handlers::users::get_user_by_id))
         .route("/api/user/:id", put(handlers::users::update_user))
         .route("/api/user/:id", delete(handlers::users::delete_user))
+        // User routes with /users prefix (alternative URIs)
+        .route("/api/users/:id", get(handlers::users::get_user_by_id))
+        .route("/api/users/:id", put(handlers::users::update_user))
+        .route("/api/users/:id", delete(handlers::users::delete_user))
+        .route("/api/users/:id/profile-photo", put(handlers::users::update_profile_photo))
+        .route("/api/users/:id/profile-photo", delete(handlers::users::delete_profile_photo))
         
         // Firearm routes
         .route("/api/firearms", post(handlers::firearms::add_firearm))
@@ -65,6 +76,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Firearm allocation routes
         .route("/api/firearm-allocation/issue", post(handlers::firearm_allocation::issue_firearm))
         .route("/api/firearm-allocation/return", post(handlers::firearm_allocation::return_firearm))
+        .route("/api/firearm-allocation", post(handlers::firearm_allocation::issue_firearm)) // Alias for issue
         .route("/api/guard-allocations/:guard_id", get(handlers::firearm_allocation::get_guard_allocations))
         .route("/api/firearm-allocations/active", get(handlers::firearm_allocation::get_active_allocations))
         .route("/api/firearm-allocations", get(handlers::firearm_allocation::get_all_allocations))
@@ -80,6 +92,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/guard-replacement/guard/:guard_id/shifts", get(handlers::guard_replacement::get_guard_shifts))
         .route("/api/guard-replacement/attendance/check-in", post(handlers::guard_replacement::check_in))
         .route("/api/guard-replacement/attendance/check-out", post(handlers::guard_replacement::check_out))
+        .route("/api/guard-replacement/check-in", post(handlers::guard_replacement::check_in)) // Alias
+        .route("/api/guard-replacement/check-out", post(handlers::guard_replacement::check_out)) // Alias
         .route("/api/attendance/:guard_id", get(handlers::guard_replacement::get_guard_attendance))
         .route("/api/guard-replacement/detect-no-shows", post(handlers::guard_replacement::detect_no_shows))
         .route("/api/guard-replacement/request-replacement", post(handlers::guard_replacement::request_replacement))
