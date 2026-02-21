@@ -249,11 +249,13 @@ pub struct RequestReplacementRequest {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SetAvailabilityRequest {
     pub guard_id: String,
-    pub is_available: bool,
+    pub available: Option<bool>,
     pub available_from: Option<DateTime<Utc>>,
-    pub available_until: Option<DateTime<Utc>>,
+    pub available_to: Option<DateTime<Utc>>,
+    pub notes: Option<String>,
 }
 // Armored Car models
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
@@ -455,4 +457,61 @@ pub struct CreateSupportTicketRequest {
     pub guard_id: String,
     pub subject: String,
     pub message: String,
+}
+
+// Notification model for web-based notification system
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct Notification {
+    pub id: String,
+    pub user_id: String,
+    pub title: String,
+    pub message: String,
+    #[serde(rename = "type")]
+    pub notification_type: String,
+    pub related_shift_id: Option<String>,
+    pub read: bool,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateNotificationRequest {
+    pub user_id: String,
+    pub title: String,
+    pub message: String,
+    #[serde(rename = "type")]
+    pub notification_type: String,
+    pub related_shift_id: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MarkNotificationReadRequest {
+    pub notification_id: String,
+}
+
+// Guard availability model
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct GuardAvailability {
+    pub id: String,
+    pub guard_id: String,
+    pub available: bool,
+    pub available_from: Option<DateTime<Utc>>,
+    pub available_to: Option<DateTime<Utc>>,
+    pub notes: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateGuardAvailabilityRequest {
+    pub guard_id: String,
+    pub available: bool,
+    pub available_from: Option<DateTime<Utc>>,
+    pub available_to: Option<DateTime<Utc>>,
+    pub notes: Option<String>,
 }

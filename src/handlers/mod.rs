@@ -10,4 +10,5 @@ pub mod support_tickets;
 pub mod missions;
 pub mod analytics;
 pub mod trip_management;
+pub mod notifications;
 

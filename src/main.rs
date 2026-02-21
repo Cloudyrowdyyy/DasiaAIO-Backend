@@ -83,7 +83,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/attendance/:guard_id", get(handlers::guard_replacement::get_guard_attendance))
         .route("/api/guard-replacement/detect-no-shows", post(handlers::guard_replacement::detect_no_shows))
         .route("/api/guard-replacement/request-replacement", post(handlers::guard_replacement::request_replacement))
+        .route("/api/guard-replacement/accept-replacement", post(handlers::guard_replacement::accept_replacement))
         .route("/api/guard-replacement/set-availability", post(handlers::guard_replacement::set_availability))
+        .route("/api/guard-replacement/availability/:guard_id", get(handlers::guard_replacement::get_guard_availability))
+        
+        // Notification routes (restructured to avoid route conflicts)
+        .route("/api/notifications", post(handlers::notifications::create_notification))
+        .route("/api/users/:user_id/notifications", get(handlers::notifications::get_user_notifications))
+        .route("/api/users/:user_id/notifications/unread-count", get(handlers::notifications::get_unread_count))
+        .route("/api/users/:user_id/notifications/mark-all-read", put(handlers::notifications::mark_all_read))
+        .route("/api/notifications/:notification_id/read", put(handlers::notifications::mark_notification_read))
+        .route("/api/notifications/:notification_id", delete(handlers::notifications::delete_notification))
 
         // Mission assignment routes (Integrated Workflow)
         .route("/api/missions/assign", post(handlers::missions::assign_mission))

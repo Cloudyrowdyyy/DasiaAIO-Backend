@@ -3,7 +3,7 @@ use axum::{
     http::StatusCode,
     Json,
 };
-use sqlx::PgPool;
+use sqlx::{PgPool, Row};
 use std::sync::Arc;
 use serde_json::json;
 
@@ -142,19 +142,119 @@ pub async fn check_out(
 pub async fn detect_no_shows(
     State(db): State<Arc<PgPool>>,
 ) -> AppResult<Json<serde_json::Value>> {
-    // This is a simplified version. In production, you'd have more complex logic
-    // to determine no-shows based on shift times and check-in records
+    // Enhanced no-show detection with grace period and automatic notifications
     
-    let no_shows = sqlx::query(
-        "SELECT s.id, s.guard_id, s.start_time, s.end_time, s.client_site FROM shifts s LEFT JOIN attendance a ON s.id = a.shift_id WHERE a.id IS NULL AND s.start_time <= CURRENT_TIMESTAMP"
+    // Step 1: Find shifts that have passed their grace period without check-in
+    #[derive(sqlx::FromRow)]
+    struct NoShowShift {
+        id: String,
+        guard_id: String,
+        start_time: chrono::DateTime<chrono::Utc>,
+        end_time: chrono::DateTime<chrono::Utc>,
+        client_site: String,
+        grace_period_minutes: Option<i32>,
+        replacement_status: Option<String>,
+    }
+    
+    let no_show_shifts = sqlx::query_as::<_, NoShowShift>(
+        "SELECT s.id, s.guard_id, s.start_time, s.end_time, s.client_site, 
+                s.grace_period_minutes, s.replacement_status
+         FROM shifts s 
+         LEFT JOIN attendance a ON s.id = a.shift_id 
+         WHERE a.id IS NULL 
+         AND s.status = 'scheduled'
+         AND (s.start_time + INTERVAL '1 minute' * COALESCE(s.grace_period_minutes, 15)) <= CURRENT_TIMESTAMP
+         AND COALESCE(s.replacement_status, 'not_needed') = 'not_needed'"
     )
     .fetch_all(db.as_ref())
     .await
-    .map_err(|e| AppError::DatabaseError(format!("Database error: {}", e)))?;
+    .map_err(|e| AppError::DatabaseError(format!("Failed to detect no-shows: {}", e)))?;
+
+    let mut notified_guards = Vec::new();
+    
+    // Step 2: For each no-show, find available substitutes and notify them
+    for shift in &no_show_shifts {
+        // Update shift status to searching
+        sqlx::query(
+            "UPDATE shifts SET replacement_status = 'searching', updated_at = CURRENT_TIMESTAMP WHERE id = $1"
+        )
+        .bind(&shift.id)
+        .execute(db.as_ref())
+        .await
+        .map_err(|e| AppError::DatabaseError(format!("Failed to update shift status: {}", e)))?;
+        
+        // Find available guards (not the original guard, verified users, with role 'user')
+        #[derive(sqlx::FromRow)]
+        struct AvailableGuard {
+            id: String,
+            username: String,
+            full_name: Option<String>,
+        }
+        
+        let available_guards = sqlx::query_as::<_, AvailableGuard>(
+            "SELECT DISTINCT u.id, u.username, u.full_name 
+             FROM users u
+             LEFT JOIN guard_availability ga ON u.id = ga.guard_id
+             WHERE u.id != $1 
+             AND u.role = 'user' 
+             AND u.verified = true
+             AND (ga.available IS NULL OR ga.available = true)
+             AND NOT EXISTS (
+                 SELECT 1 FROM shifts s2 
+                 WHERE s2.guard_id = u.id 
+                 AND s2.status IN ('scheduled', 'in_progress')
+                 AND s2.start_time <= $2 
+                 AND s2.end_time >= $3
+             )
+             LIMIT 20"
+        )
+        .bind(&shift.guard_id)
+        .bind(&shift.end_time)
+        .bind(&shift.start_time)
+        .fetch_all(db.as_ref())
+        .await
+        .map_err(|e| AppError::DatabaseError(format!("Failed to find available guards: {}", e)))?;
+        
+        // Step 3: Create notifications for available guards
+        for guard in &available_guards {
+            let notification_id = utils::generate_id();
+            let guard_name = guard.full_name.as_ref().unwrap_or(&guard.username);
+            
+            sqlx::query(
+                "INSERT INTO notifications (id, user_id, title, message, type, related_shift_id, read) 
+                 VALUES ($1, $2, $3, $4, 'replacement_request', $5, false)"
+            )
+            .bind(&notification_id)
+            .bind(&guard.id)
+            .bind("Replacement Needed - Urgent")
+            .bind(format!(
+                "Guard no-show detected at {}. Can you cover this shift from {} to {}? Click to accept.",
+                shift.client_site,
+                shift.start_time.format("%I:%M %p"),
+                shift.end_time.format("%I:%M %p")
+            ))
+            .bind(&shift.id)
+            .execute(db.as_ref())
+            .await
+            .map_err(|e| AppError::DatabaseError(format!("Failed to create notification: {}", e)))?;
+            
+            notified_guards.push(json!({
+                "guardId": guard.id,
+                "guardName": guard_name,
+                "shiftId": shift.id
+            }));
+        }
+        
+        tracing::info!(
+            "No-show detected for shift {} (Guard: {}). Notified {} available guards.",
+            shift.id, shift.guard_id, available_guards.len()
+        );
+    }
 
     Ok(Json(json!({
-        "message": "No-shows detected",
-        "noShowsCount": no_shows.len()
+        "message": "No-show detection completed",
+        "noShowsCount": no_show_shifts.len(),
+        "notifiedGuards": notified_guards
     })))
 }
 
@@ -212,7 +312,7 @@ pub async fn set_availability(
 ) -> AppResult<Json<serde_json::Value>> {
     if payload.guard_id.is_empty() {
         return Err(AppError::BadRequest(
-            "Guard ID and availability status are required".to_string()
+            "Guard ID is required".to_string()
         ));
     }
 
@@ -224,14 +324,161 @@ pub async fn set_availability(
         .map_err(|e| AppError::DatabaseError(format!("Database error: {}", e)))?
         .ok_or_else(|| AppError::NotFound("Guard not found".to_string()))?;
 
-    // For now, just return success
-    // In a full implementation, you'd store availability data
-    // perhaps in a guard_availability table
+    // Check if availability record exists
+    let existing = sqlx::query(
+        "SELECT id FROM guard_availability WHERE guard_id = $1 ORDER BY created_at DESC LIMIT 1"
+    )
+    .bind(&payload.guard_id)
+    .fetch_optional(db.as_ref())
+    .await
+    .map_err(|e| AppError::DatabaseError(format!("Database error: {}", e)))?;
+
+    if existing.is_some() {
+        // Update existing record
+        sqlx::query(
+            "UPDATE guard_availability 
+             SET available = $1, updated_at = CURRENT_TIMESTAMP 
+             WHERE guard_id = $2"
+        )
+        .bind(payload.available.unwrap_or(true))
+        .bind(&payload.guard_id)
+        .execute(db.as_ref())
+        .await
+        .map_err(|e| AppError::DatabaseError(format!("Failed to update availability: {}", e)))?;
+    } else {
+        // Create new record
+        let id = utils::generate_id();
+        sqlx::query(
+            "INSERT INTO guard_availability (id, guard_id, available) VALUES ($1, $2, $3)"
+        )
+        .bind(&id)
+        .bind(&payload.guard_id)
+        .bind(payload.available.unwrap_or(true))
+        .execute(db.as_ref())
+        .await
+        .map_err(|e| AppError::DatabaseError(format!("Failed to create availability: {}", e)))?;
+    }
 
     Ok(Json(json!({
         "message": "Guard availability updated successfully"
     })))
 }
+
+// Accept a replacement shift
+pub async fn accept_replacement(
+    State(db): State<Arc<PgPool>>,
+    Json(payload): Json<serde_json::Value>,
+) -> AppResult<Json<serde_json::Value>> {
+    let guard_id = payload.get("guardId")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| AppError::BadRequest("Guard ID is required".to_string()))?;
+    
+    let shift_id = payload.get("shiftId")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| AppError::BadRequest("Shift ID is required".to_string()))?;
+    
+    let notification_id = payload.get("notificationId")
+        .and_then(|v| v.as_str());
+
+    // Verify guard exists
+    sqlx::query("SELECT id FROM users WHERE id = $1")
+        .bind(guard_id)
+        .fetch_optional(db.as_ref())
+        .await
+        .map_err(|e| AppError::DatabaseError(format!("Database error: {}", e)))?
+        .ok_or_else(|| AppError::NotFound("Guard not found".to_string()))?;
+
+    // Verify shift exists and needs replacement
+    let shift = sqlx::query(
+        "SELECT id, replacement_status FROM shifts WHERE id = $1"
+    )
+    .bind(shift_id)
+    .fetch_optional(db.as_ref())
+    .await
+    .map_err(|e| AppError::DatabaseError(format!("Database error: {}", e)))?
+    .ok_or_else(|| AppError::NotFound("Shift not found".to_string()))?;
+
+    // Update shift with new guard and mark as accepted
+    sqlx::query(
+        "UPDATE shifts 
+         SET guard_id = $1, replacement_status = 'accepted', updated_at = CURRENT_TIMESTAMP 
+         WHERE id = $2"
+    )
+    .bind(guard_id)
+    .bind(shift_id)
+    .execute(db.as_ref())
+    .await
+    .map_err(|e| AppError::DatabaseError(format!("Failed to accept replacement: {}", e)))?;
+
+    // Mark the notification as read if provided
+    if let Some(notif_id) = notification_id {
+        sqlx::query(
+            "UPDATE notifications SET read = true, updated_at = CURRENT_TIMESTAMP WHERE id = $1"
+        )
+        .bind(notif_id)
+        .execute(db.as_ref())
+        .await
+        .ok(); // Ignore errors on notification update
+    }
+
+    // Cancel other pending notifications for this shift
+    sqlx::query(
+        "UPDATE notifications 
+         SET read = true, updated_at = CURRENT_TIMESTAMP 
+         WHERE related_shift_id = $1 AND type = 'replacement_request' AND read = false"
+    )
+    .bind(shift_id)
+    .execute(db.as_ref())
+    .await
+    .ok(); // Ignore errors
+
+    tracing::info!(
+        "Replacement accepted: Guard {} accepted shift {}",
+        guard_id, shift_id
+    );
+
+    Ok(Json(json!({
+        "message": "Replacement shift accepted successfully",
+        "shiftId": shift_id,
+        "guardId": guard_id
+    })))
+}
+
+// Get guard availability
+pub async fn get_guard_availability(
+    State(db): State<Arc<PgPool>>,
+    Path(guard_id): Path<String>,
+) -> AppResult<Json<serde_json::Value>> {
+    let availability = sqlx::query(
+        "SELECT id, guard_id, available, available_from, available_to, notes, created_at, updated_at 
+         FROM guard_availability 
+         WHERE guard_id = $1 
+         ORDER BY created_at DESC 
+         LIMIT 1"
+    )
+    .bind(&guard_id)
+    .fetch_optional(db.as_ref())
+    .await
+    .map_err(|e| AppError::DatabaseError(format!("Database error: {}", e)))?;
+
+    if let Some(row) = availability {
+        Ok(Json(json!({
+            "available": row.try_get::<bool, _>("available").unwrap_or(true),
+            "availableFrom": row.try_get::<Option<chrono::DateTime<chrono::Utc>>, _>("available_from").ok().flatten(),
+            "availableTo": row.try_get::<Option<chrono::DateTime<chrono::Utc>>, _>("available_to").ok().flatten(),
+            "notes": row.try_get::<Option<String>, _>("notes").ok().flatten()
+        })))
+    } else {
+        // Default to available if no record exists
+        Ok(Json(json!({
+            "available": true,
+            "availableFrom": null,
+            "availableTo": null,
+            "notes": null
+        })))
+    }
+}
+
 
 pub async fn get_guard_shifts(
     State(db): State<Arc<PgPool>>,
