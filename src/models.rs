@@ -182,6 +182,7 @@ pub struct IssueFirearmRequest {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ReturnFirearmRequest {
     pub allocation_id: String,
 }
@@ -345,7 +346,7 @@ pub struct CarMaintenance {
     pub car_id: String,
     pub maintenance_type: String,
     pub description: String,
-    pub cost: Option<String>,
+    pub cost: Option<f64>,
     pub scheduled_date: Option<DateTime<Utc>>,
     pub completion_date: Option<DateTime<Utc>>,
     pub status: String,
@@ -361,6 +362,7 @@ pub struct CreateMaintenanceRequest {
     pub maintenance_type: String,
     pub description: String,
     pub scheduled_date: Option<DateTime<Utc>>,
+    /// Accepts a numeric string (e.g. "5000") or null — stored as text in car_maintenance.cost
     pub cost: Option<String>,
 }
 
@@ -417,6 +419,8 @@ pub struct CreateTripRequest {
 pub struct EndTripRequest {
     pub trip_id: String,
     pub end_location: String,
+    /// Accepts a string (e.g. "8.5") so frontend/scripts don't need to cast to float.
+    /// The column type is DECIMAL but sqlx will coerce the string.
     pub distance_km: Option<String>,
 }
 

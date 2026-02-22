@@ -250,6 +250,11 @@ pub async fn schedule_maintenance(
 ) -> AppResult<(StatusCode, Json<serde_json::Value>)> {
     let id = utils::generate_id();
 
+    // Parse cost string to f64 for the NUMERIC column; null if absent or unparseable.
+    let cost_f64: Option<f64> = payload.cost
+        .as_deref()
+        .and_then(|s| s.parse::<f64>().ok());
+
     sqlx::query(
         "INSERT INTO car_maintenance (id, car_id, maintenance_type, description, scheduled_date, cost, status) VALUES ($1, $2, $3, $4, $5, $6, $7)"
     )
@@ -258,7 +263,7 @@ pub async fn schedule_maintenance(
     .bind(&payload.maintenance_type)
     .bind(&payload.description)
     .bind(&payload.scheduled_date)
-    .bind(&payload.cost)
+    .bind(cost_f64)
     .bind("scheduled")
     .execute(db.as_ref())
     .await
@@ -414,11 +419,16 @@ pub async fn end_trip(
     State(db): State<Arc<PgPool>>,
     Json(payload): Json<EndTripRequest>,
 ) -> AppResult<Json<serde_json::Value>> {
+    // Parse distance_km string to f64 for the DECIMAL column; null if unparseable.
+    let distance_km_f64: Option<f64> = payload.distance_km
+        .as_deref()
+        .and_then(|s| s.parse::<f64>().ok());
+
     sqlx::query(
         "UPDATE trips SET end_location = $1, distance_km = $2, end_time = CURRENT_TIMESTAMP, status = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $4"
     )
     .bind(&payload.end_location)
-    .bind(&payload.distance_km)
+    .bind(distance_km_f64)
     .bind("completed")
     .bind(&payload.trip_id)
     .execute(db.as_ref())

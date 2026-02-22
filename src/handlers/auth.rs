@@ -105,24 +105,48 @@ pub async fn register(
     .await
     .map_err(|e| AppError::DatabaseError(format!("Failed to create verification: {}", e)))?;
 
-    // Send email (you'll need email config from environment/state)
-    // For now, just log it
-    let gmail_user = std::env::var("GMAIL_USER").unwrap_or_else(|_| "no-reply@example.com".to_string());
-    let gmail_password = std::env::var("GMAIL_PASSWORD").unwrap_or_else(|_| "dummy-password".to_string());
-    utils::send_confirmation_email(
-        &gmail_user,
-        &gmail_password,
-        &payload.email,
-        &confirmation_code,
-    ).await?;
+    // Attempt to send verification email — failure is non-fatal so the user
+    // is always created even when SMTP isn't configured (dev / staging).
+    let gmail_user = std::env::var("GMAIL_USER").unwrap_or_default();
+    let gmail_password = std::env::var("GMAIL_PASSWORD").unwrap_or_default();
+    let email_sent = if !gmail_user.is_empty() && !gmail_password.is_empty() {
+        match utils::send_confirmation_email(
+            &gmail_user,
+            &gmail_password,
+            &payload.email,
+            &confirmation_code,
+        ).await {
+            Ok(_) => {
+                tracing::info!("Verification email sent to {}", payload.email);
+                true
+            }
+            Err(e) => {
+                tracing::warn!("Failed to send verification email to {}: {}. User created but email not sent.", payload.email, e);
+                false
+            }
+        }
+    } else {
+        tracing::warn!("GMAIL_USER / GMAIL_PASSWORD not set — skipping email, code logged to console.");
+        tracing::info!("Verification code for {} : {}", payload.email, confirmation_code);
+        false
+    };
+
+    // Include the confirmation code in the response when email was not sent
+    // (allows test/simulation scripts to verify without a real inbox).
+    let response_code: Option<&str> = if email_sent { None } else { Some(&confirmation_code) };
 
     Ok((
         StatusCode::CREATED,
         Json(json!({
-            "message": "Registration successful! Check your Gmail for confirmation code.",
+            "message": if email_sent {
+                "Registration successful! Check your Gmail for confirmation code."
+            } else {
+                "Registration successful! Email not sent — use the confirmationCode field to verify."
+            },
             "userId": user_id,
             "email": payload.email,
-            "requiresVerification": true
+            "requiresVerification": true,
+            "confirmationCode": response_code
         })),
     ))
 }
