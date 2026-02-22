@@ -443,7 +443,7 @@ pub async fn get_car_trips(
     Path(car_id): Path<String>,
 ) -> AppResult<Json<Vec<Trip>>> {
     let trips = sqlx::query_as::<_, Trip>(
-        "SELECT id, car_id, driver_id, allocation_id, start_location, end_location, start_time, end_time, distance_km, status, mission_details, created_at, updated_at FROM trips WHERE car_id = $1 ORDER BY start_time DESC"
+        "SELECT id, car_id, driver_id, allocation_id, start_location, end_location, start_time, end_time, distance_km::FLOAT8 as distance_km, status, mission_details, created_at, updated_at FROM trips WHERE car_id = $1 ORDER BY start_time DESC"
     )
     .bind(&car_id)
     .fetch_all(db.as_ref())
@@ -457,7 +457,7 @@ pub async fn get_all_trips(
     State(db): State<Arc<PgPool>>,
 ) -> AppResult<Json<Vec<Trip>>> {
     let trips = sqlx::query_as::<_, Trip>(
-        "SELECT id, car_id, driver_id, allocation_id, start_location, end_location, start_time, end_time, distance_km, status, mission_details, created_at, updated_at FROM trips ORDER BY start_time DESC"
+        "SELECT id, car_id, driver_id, allocation_id, start_location, end_location, start_time, end_time, distance_km::FLOAT8 as distance_km, status, mission_details, created_at, updated_at FROM trips ORDER BY start_time DESC"
     )
     .fetch_all(db.as_ref())
     .await

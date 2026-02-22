@@ -390,18 +390,18 @@ pub struct AssignDriverRequest {
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Trip {
     pub id: String,
-    pub car_id: String,
-    pub driver_id: String,
+    pub car_id: Option<String>,
+    pub driver_id: Option<String>,
     pub allocation_id: Option<String>,
-    pub start_location: String,
+    pub start_location: Option<String>,
     pub end_location: Option<String>,
-    pub start_time: DateTime<Utc>,
+    pub start_time: Option<DateTime<Utc>>,
     pub end_time: Option<DateTime<Utc>>,
-    pub distance_km: Option<String>,
-    pub status: String,
+    pub distance_km: Option<f64>,  // DB column is NUMERIC; EndTripRequest uses Option<String> for parsing
+    pub status: Option<String>,
     pub mission_details: Option<String>,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Deserialize)]
