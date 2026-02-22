@@ -173,7 +173,12 @@ pub struct FirearmAllocation {
 pub struct IssueFirearmRequest {
     pub firearm_id: String,
     pub guard_id: String,
+    pub shift_id: Option<String>,
+    pub issued_by: Option<String>,
+    pub expected_return_date: Option<DateTime<Utc>>,
     pub notes: Option<String>,
+    /// If true, skip permit/training checks (for admin override)
+    pub force: Option<bool>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -530,3 +535,187 @@ pub struct UpdateGuardAvailabilityRequest {
     pub available_to: Option<DateTime<Utc>>,
     pub notes: Option<String>,
 }
+
+// Merit Score System Models (Requirement 2)
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct GuardMeritScore {
+    pub id: String,
+    pub guard_id: String,
+    pub attendance_score: f64,
+    pub punctuality_score: f64,
+    pub client_rating: f64,
+    pub overall_score: f64,
+    pub rank: Option<String>,
+    pub total_shifts_completed: Option<i32>,
+    pub on_time_count: Option<i32>,
+    pub late_count: Option<i32>,
+    pub no_show_count: Option<i32>,
+    pub average_client_rating: Option<f64>,
+    pub evaluation_count: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_calculated_at: Option<DateTime<Utc>>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CalculateMeritScoreRequest {
+    pub guard_id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ClientEvaluation {
+    pub id: String,
+    pub guard_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub shift_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mission_id: Option<String>,
+    pub evaluator_name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub evaluator_role: Option<String>,
+    pub rating: f64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub comment: Option<String>,
+    pub created_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateClientEvaluationRequest {
+    pub guard_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub shift_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mission_id: Option<String>,
+    pub evaluator_name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub evaluator_role: Option<String>,
+    pub rating: f64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub comment: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct PunctualityRecord {
+    pub id: String,
+    pub guard_id: String,
+    pub shift_id: String,
+    pub scheduled_start_time: DateTime<Utc>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub actual_check_in_time: Option<DateTime<Utc>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub minutes_late: Option<i32>,
+    pub is_on_time: bool,
+    pub status: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MeritScoreResponse {
+    pub guard_id: String,
+    pub guard_name: Option<String>,
+    pub overall_score: f64,
+    pub rank: Option<String>,
+    pub attendance_score: f64,
+    pub punctuality_score: f64,
+    pub client_rating: f64,
+    pub stats: MeritStats,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MeritStats {
+    pub total_shifts: i32,
+    pub on_time_count: i32,
+    pub late_count: i32,
+    pub no_show_count: i32,
+    pub evaluations: i32,
+    pub average_rating: f64,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RankedGuardResponse {
+    pub rank: i32,
+    pub guard_id: String,
+    pub guard_name: Option<String>,
+    pub overall_score: f64,
+    pub merit_rank: Option<String>,
+    pub on_time_percentage: f64,
+    pub client_rating: f64,
+}
+
+// ── Requirement 3: Firearm Maintenance ──────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct FirearmMaintenance {
+    pub id: String,
+    pub firearm_id: String,
+    pub maintenance_type: String,
+    pub description: String,
+    pub scheduled_date: DateTime<Utc>,
+    pub completion_date: Option<DateTime<Utc>>,
+    pub performed_by: Option<String>,
+    pub cost: Option<String>,
+    pub status: String,
+    pub notes: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateFirearmMaintenanceRequest {
+    pub firearm_id: String,
+    pub maintenance_type: String,
+    pub description: String,
+    pub scheduled_date: DateTime<Utc>,
+    pub performed_by: Option<String>,
+    pub cost: Option<String>,
+    pub notes: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CompleteFirearmMaintenanceRequest {
+    pub performed_by: Option<String>,
+    pub cost: Option<String>,
+    pub notes: Option<String>,
+}
+
+// ── Requirement 3: Training Records ─────────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct TrainingRecord {
+    pub id: String,
+    pub guard_id: String,
+    pub training_type: String,
+    pub completed_date: DateTime<Utc>,
+    pub expiry_date: Option<DateTime<Utc>>,
+    pub certificate_number: Option<String>,
+    pub status: String,
+    pub notes: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateTrainingRecordRequest {
+    pub guard_id: String,
+    pub training_type: String,
+    pub completed_date: DateTime<Utc>,
+    pub expiry_date: Option<DateTime<Utc>>,
+    pub certificate_number: Option<String>,
+    pub notes: Option<String>,
+}
+
+

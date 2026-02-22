@@ -82,3 +82,62 @@ pub async fn get_all_permits(
         "permits": permits
     })))
 }
+
+/// GET /api/guard-firearm-permits/expiring  — expiring within 30 days
+pub async fn get_expiring_permits(
+    State(db): State<Arc<PgPool>>,
+) -> AppResult<Json<serde_json::Value>> {
+    let permits = sqlx::query_as::<_, GuardFirearmPermit>(
+        r#"SELECT id, guard_id, firearm_id, permit_type, issued_date, expiry_date, status, created_at, updated_at
+           FROM guard_firearm_permits
+           WHERE status = 'active'
+             AND expiry_date BETWEEN NOW() AND NOW() + INTERVAL '30 days'
+           ORDER BY expiry_date ASC"#,
+    )
+    .fetch_all(db.as_ref())
+    .await
+    .map_err(|e| AppError::DatabaseError(format!("Database error: {}", e)))?;
+
+    Ok(Json(json!({
+        "total": permits.len(),
+        "expiringPermits": permits
+    })))
+}
+
+/// PUT /api/guard-firearm-permits/:permit_id/revoke
+pub async fn revoke_permit(
+    State(db): State<Arc<PgPool>>,
+    Path(permit_id): Path<String>,
+) -> AppResult<Json<serde_json::Value>> {
+    let result = sqlx::query(
+        "UPDATE guard_firearm_permits SET status = 'revoked', updated_at = NOW() WHERE id = $1",
+    )
+    .bind(&permit_id)
+    .execute(db.as_ref())
+    .await
+    .map_err(|e| AppError::DatabaseError(format!("Database error: {}", e)))?;
+
+    if result.rows_affected() == 0 {
+        return Err(AppError::NotFound("Permit not found".to_string()));
+    }
+
+    Ok(Json(json!({ "message": "Permit revoked successfully" })))
+}
+
+/// POST /api/guard-firearm-permits/auto-expire  — batch expire all past-due permits
+pub async fn auto_expire_permits(
+    State(db): State<Arc<PgPool>>,
+) -> AppResult<Json<serde_json::Value>> {
+    let result = sqlx::query(
+        "UPDATE guard_firearm_permits SET status = 'expired', updated_at = NOW() WHERE status = 'active' AND expiry_date < NOW()",
+    )
+    .execute(db.as_ref())
+    .await
+    .map_err(|e| AppError::DatabaseError(format!("Batch expire error: {}", e)))?;
+
+    Ok(Json(json!({
+        "message": "Auto-expire completed",
+        "expiredCount": result.rows_affected()
+    })))
+}
+

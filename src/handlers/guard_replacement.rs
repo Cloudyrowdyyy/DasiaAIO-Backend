@@ -102,6 +102,27 @@ pub async fn check_in(
     .await
     .map_err(|e| AppError::DatabaseError(format!("Failed to record check-in: {}", e)))?;
 
+    let punctuality_id = utils::generate_id();
+    sqlx::query(
+        "INSERT INTO punctuality_records (id, guard_id, shift_id, scheduled_start_time, actual_check_in_time, minutes_late, is_on_time, status)
+         SELECT $1, $2, s.id, s.start_time, CURRENT_TIMESTAMP,
+                CAST(EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - s.start_time)) / 60 AS INT),
+                CASE WHEN CURRENT_TIMESTAMP <= s.start_time + INTERVAL '5 minutes' THEN true ELSE false END,
+                CASE
+                    WHEN CURRENT_TIMESTAMP <= s.start_time THEN 'early'
+                    WHEN CURRENT_TIMESTAMP <= s.start_time + INTERVAL '5 minutes' THEN 'on_time'
+                    ELSE 'late'
+                END
+         FROM shifts s
+         WHERE s.id = $3"
+    )
+    .bind(&punctuality_id)
+    .bind(&payload.guard_id)
+    .bind(&payload.shift_id)
+    .execute(db.as_ref())
+    .await
+    .map_err(|e| AppError::DatabaseError(format!("Failed to record punctuality: {}", e)))?;
+
     Ok((StatusCode::CREATED, Json(json!({
         "message": "Check-in recorded successfully",
         "attendanceId": attendance_id

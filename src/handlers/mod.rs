@@ -11,4 +11,6 @@ pub mod missions;
 pub mod analytics;
 pub mod trip_management;
 pub mod notifications;
-
+pub mod merit;
+pub mod firearm_maintenance;
+pub mod training;

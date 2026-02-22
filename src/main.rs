@@ -116,11 +116,36 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Guard permits routes
         .route("/api/guard-firearm-permits", post(handlers::permits::create_guard_permit))
         .route("/api/guard-firearm-permits", get(handlers::permits::get_all_permits))
+        .route("/api/guard-firearm-permits/expiring", get(handlers::permits::get_expiring_permits))
+        .route("/api/guard-firearm-permits/auto-expire", post(handlers::permits::auto_expire_permits))
+        .route("/api/guard-firearm-permits/:permit_id/revoke", put(handlers::permits::revoke_permit))
         .route("/api/guard-firearm-permits/:guard_id", get(handlers::permits::get_guard_permits))
+
+        // Firearm maintenance routes (Requirement 3)
+        .route("/api/firearm-maintenance/schedule", post(handlers::firearm_maintenance::schedule_maintenance))
+        .route("/api/firearm-maintenance/pending", get(handlers::firearm_maintenance::get_pending_maintenance))
+        .route("/api/firearm-maintenance/:maintenance_id/complete", post(handlers::firearm_maintenance::complete_maintenance))
+        .route("/api/firearm-maintenance/:firearm_id", get(handlers::firearm_maintenance::get_firearm_maintenance))
+
+        // Training records routes (Requirement 3)
+        .route("/api/training-records", post(handlers::training::create_training_record))
+        .route("/api/training-records/expiring", get(handlers::training::get_expiring_training))
+        .route("/api/training-records/:guard_id", get(handlers::training::get_guard_training))
+
+        // Overdue allocations (Requirement 3)
+        .route("/api/firearm-allocations/overdue", get(handlers::firearm_allocation::get_overdue_allocations))
 
         // Support tickets routes
         .route("/api/support-tickets", post(handlers::support_tickets::create_ticket))
         .route("/api/support-tickets/:guard_id", get(handlers::support_tickets::get_guard_tickets))
+        
+        // Merit score system routes (Requirement 2)
+        .route("/api/merit/calculate", post(handlers::merit::calculate_merit_score))
+        .route("/api/merit/:guard_id", get(handlers::merit::get_guard_merit_score))
+        .route("/api/merit/rankings/all", get(handlers::merit::get_ranked_guards))
+        .route("/api/merit/evaluations/submit", post(handlers::merit::submit_client_evaluation))
+        .route("/api/merit/evaluations/:guard_id", get(handlers::merit::get_guard_evaluations))
+        .route("/api/merit/overtime-candidates", get(handlers::merit::get_overtime_candidates))
         
         // Armored car routes
         .route("/api/armored-cars", post(handlers::armored_cars::add_armored_car))
