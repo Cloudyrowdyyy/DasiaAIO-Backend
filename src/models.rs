@@ -343,16 +343,16 @@ pub struct ReturnCarRequest {
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct CarMaintenance {
     pub id: String,
-    pub car_id: String,
-    pub maintenance_type: String,
-    pub description: String,
-    pub cost: Option<f64>,
+    pub car_id: Option<String>,
+    pub maintenance_type: Option<String>,
+    pub description: Option<String>,
+    pub cost: Option<f64>,  // DB column is NUMERIC; queried with ::FLOAT8 cast
     pub scheduled_date: Option<DateTime<Utc>>,
     pub completion_date: Option<DateTime<Utc>>,
-    pub status: String,
+    pub status: Option<String>,
     pub notes: Option<String>,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Deserialize)]

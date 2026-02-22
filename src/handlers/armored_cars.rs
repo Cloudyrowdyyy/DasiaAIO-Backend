@@ -283,7 +283,7 @@ pub async fn complete_maintenance(
     Path(maintenance_id): Path<String>,
 ) -> AppResult<Json<serde_json::Value>> {
     let maintenance = sqlx::query_as::<_, CarMaintenance>(
-        "SELECT id, car_id, maintenance_type, description, cost, scheduled_date, completion_date, status, notes, created_at, updated_at FROM car_maintenance WHERE id = $1"
+        "SELECT id, car_id, maintenance_type, description, cost::FLOAT8 as cost, scheduled_date, completion_date, status, notes, created_at, updated_at FROM car_maintenance WHERE id = $1"
     )
     .bind(&maintenance_id)
     .fetch_optional(db.as_ref())
@@ -315,7 +315,7 @@ pub async fn get_car_maintenance_records(
     Path(car_id): Path<String>,
 ) -> AppResult<Json<Vec<CarMaintenance>>> {
     let records = sqlx::query_as::<_, CarMaintenance>(
-        "SELECT id, car_id, maintenance_type, description, cost, scheduled_date, completion_date, status, notes, created_at, updated_at FROM car_maintenance WHERE car_id = $1 ORDER BY scheduled_date DESC"
+        "SELECT id, car_id, maintenance_type, description, cost::FLOAT8 as cost, scheduled_date, completion_date, status, notes, created_at, updated_at FROM car_maintenance WHERE car_id = $1 ORDER BY scheduled_date DESC"
     )
     .bind(&car_id)
     .fetch_all(db.as_ref())
