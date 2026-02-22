@@ -26,10 +26,8 @@ foreach ($i in 0..4) {
     $evaluationPayload = @{
         guardId = $testGuardId
         rating = $ratings[$i]
-        comments = "Excellent performance during mission $($i+1)"
+        comment = "Excellent performance during mission $($i+1)"
         evaluatorName = "Client $($i+1)"
-        evaluatorEmail = "client$($i+1)@company.com"
-        missionDate = (Get-Date).AddDays(-$i).ToString("yyyy-MM-dd")
     } | ConvertTo-Json
 
     $response = Invoke-RestMethod -Uri "$API_BASE_URL/api/merit/evaluations/submit" -Method Post -Headers @{"Content-Type"="application/json"} -Body $evaluationPayload
