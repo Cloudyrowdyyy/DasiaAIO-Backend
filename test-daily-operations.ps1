@@ -1,5 +1,5 @@
 ################################################################################
-# DASIA - Daily Operations Simulation Script
+# SENTINEL - Daily Operations Simulation Script
 # Simulates a full operational day at Davao Security & Investigation Agency:
 #   Admin login -> Guard registration & verification -> Shift scheduling ->
 #   Permit -> Training -> Firearm allocation -> Armored-car ops -> Trip ->
@@ -155,7 +155,7 @@ $shiftBody  = @{
     guardId    = $GUARD_ID
     startTime  = $shiftStart
     endTime    = $shiftEnd
-    clientSite = "DASIA HQ - Davao City"
+    clientSite = "SENTINEL HQ - Davao City"
 }
 $shiftResp = Post "/api/guard-replacement/shifts" $shiftBody
 if ($shiftResp -and $shiftResp.shiftId) {
@@ -358,7 +358,7 @@ if ($CAR_ID) {
         carId          = $CAR_ID
         driverId       = $GUARD_ID
         allocationId   = $CAR_ALLOC_ID
-        startLocation  = "DASIA HQ - Davao City"
+        startLocation  = "SENTINEL HQ - Davao City"
         missionDetails = "Cash-in-transit delivery to Abreeza Mall"
     }
     $tripResp = Post "/api/trips" $tripBody
@@ -517,7 +517,7 @@ Step "Submit client evaluation for guard"
 # Required fields: guardId, evaluatorName, rating
 $evalBody = @{
     guardId       = $GUARD_ID
-    evaluatorName = "DASIA Operations Manager"
+    evaluatorName = "SENTINEL Operations Manager"
     evaluatorRole = "Client"
     shiftId       = $SHIFT_ID
     rating        = 5
@@ -568,7 +568,7 @@ if ($analytics) {
 $total = $PASS + $FAIL
 Write-Host ""
 Write-Host "=======================================================" -ForegroundColor White
-Write-Host "  DASIA Daily Operations Simulation -- RESULTS"          -ForegroundColor White
+Write-Host "  SENTINEL Daily Operations Simulation -- RESULTS"          -ForegroundColor White
 Write-Host "=======================================================" -ForegroundColor White
 Write-Host "  Passed : $PASS / $total" -ForegroundColor Green
 if ($FAIL -gt 0) {
