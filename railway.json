@@ -10,7 +10,7 @@
         "SERVER_PORT": "$PORT",
         "ADMIN_CODE": "122601",
         "RUST_LOG": "info",
-        "CORS_ORIGIN": "https://dasiaaio.up.railway.app"
+        "CORS_ORIGIN": "https://sentineldasia.up.railway.app"
       }
     }
   }
