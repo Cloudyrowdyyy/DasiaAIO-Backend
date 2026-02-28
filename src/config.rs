@@ -23,8 +23,9 @@ impl Config {
             server_port: port_str
                 .parse()
                 .map_err(|_| format!("PORT '{}' must be a valid number", port_str))?,
-            database_url: env::var("DATABASE_URL")
-                .map_err(|_| "DATABASE_URL must be set".to_string())?,
+            database_url: env::var("DATABASE_PRIVATE_URL")
+                .or_else(|_| env::var("DATABASE_URL"))
+                .map_err(|_| "DATABASE_URL (or DATABASE_PRIVATE_URL) must be set. On Railway, add DATABASE_URL = ${{Postgres.DATABASE_URL}} to the backend service variables.".to_string())?,
             gmail_user: env::var("GMAIL_USER").unwrap_or_else(|_| "no-reply@example.com".to_string()),
             gmail_password: env::var("GMAIL_PASSWORD").unwrap_or_else(|_| "dummy-password".to_string()),
             admin_code: env::var("ADMIN_CODE").unwrap_or_else(|_| "122601".to_string()),
