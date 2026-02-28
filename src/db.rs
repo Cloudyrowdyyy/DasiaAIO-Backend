@@ -1,23 +1,15 @@
-use sqlx::postgres::{PgPool, PgPoolOptions, PgConnectOptions, PgSslMode};
-use std::str::FromStr;
+use sqlx::postgres::{PgPool, PgPoolOptions};
 use crate::error::{AppError, AppResult};
 
 pub async fn init_db_pool(database_url: &str) -> AppResult<PgPool> {
     const MAX_RETRIES: u32 = 10;
     const RETRY_DELAY_SECS: u64 = 5;
 
-    // Parse the URL and set SSL mode to Prefer (accepts both TLS and plain).
-    // Railway Postgres public URLs require TLS; private (internal) URLs do not.
-    // PgSslMode::Prefer handles both transparently.
-    let connect_options = PgConnectOptions::from_str(database_url)
-        .map_err(|e| AppError::DatabaseError(format!("Invalid DATABASE_URL: {}", e)))?
-        .ssl_mode(PgSslMode::Prefer);
-
     for attempt in 1..=MAX_RETRIES {
         match PgPoolOptions::new()
             .max_connections(10)
             .acquire_timeout(std::time::Duration::from_secs(30))
-            .connect_with(connect_options.clone())
+            .connect(database_url)
             .await
         {
             Ok(pool) => {
