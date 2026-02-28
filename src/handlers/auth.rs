@@ -172,8 +172,11 @@ pub async fn verify_email(
     .ok_or_else(|| AppError::BadRequest("Invalid confirmation code".to_string()))?;
 
     // Check if code expired
-    if chrono::Utc::now() > verification.try_get::<chrono::DateTime<chrono::Utc>, _>("expires_at").unwrap() {
-        let ver_id: String = verification.try_get("id").unwrap();
+    let expires_at: chrono::DateTime<chrono::Utc> = verification.try_get("expires_at")
+        .map_err(|e| AppError::DatabaseError(format!("Failed to parse verification expiry: {}", e)))?;
+    if chrono::Utc::now() > expires_at {
+        let ver_id: String = verification.try_get("id")
+            .map_err(|e| AppError::DatabaseError(format!("Failed to parse verification id: {}", e)))?;
         sqlx::query("DELETE FROM verifications WHERE id = $1")
             .bind(&ver_id)
             .execute(db.as_ref())
@@ -183,7 +186,8 @@ pub async fn verify_email(
     }
 
     // Mark user as verified
-    let user_id: String = verification.try_get("user_id").unwrap();
+    let user_id: String = verification.try_get("user_id")
+        .map_err(|e| AppError::DatabaseError(format!("Failed to parse user_id: {}", e)))?;
     sqlx::query(
         "UPDATE users SET verified = TRUE WHERE id = $1"
     )
@@ -193,7 +197,8 @@ pub async fn verify_email(
     .map_err(|e| AppError::DatabaseError(format!("Database error: {}", e)))?;
 
     // Delete verification record
-    let ver_id: String = verification.try_get("id").unwrap();
+    let ver_id: String = verification.try_get("id")
+        .map_err(|e| AppError::DatabaseError(format!("Failed to parse verification id: {}", e)))?;
     sqlx::query("DELETE FROM verifications WHERE id = $1")
         .bind(&ver_id)
         .execute(db.as_ref())
@@ -226,7 +231,8 @@ pub async fn resend_verification_code(
     let expires_at = chrono::Utc::now() + Duration::minutes(10);
 
     // Delete old verification
-    let user_id: String = user.try_get("id").unwrap();
+    let user_id: String = user.try_get("id")
+        .map_err(|e| AppError::DatabaseError(format!("Failed to parse user id: {}", e)))?;
     sqlx::query("DELETE FROM verifications WHERE user_id = $1")
         .bind(&user_id)
         .execute(db.as_ref())
@@ -290,16 +296,21 @@ pub async fn login(
     }
 
     // Verify password
-    let password_hash: String = user.try_get("password").unwrap();
+    let password_hash: String = user.try_get("password")
+        .map_err(|e| AppError::DatabaseError(format!("Failed to parse password hash: {}", e)))?;
     let password_valid = verify_password(&payload.password, &password_hash).await?;
     if !password_valid {
         return Err(AppError::BadRequest("Invalid credentials".to_string()));
     }
 
-    let id: String = user.try_get("id").unwrap();
-    let email: String = user.try_get("email").unwrap();
-    let username: String = user.try_get("username").unwrap();
-    let role: String = user.try_get("role").unwrap();
+    let id: String = user.try_get("id")
+        .map_err(|e| AppError::DatabaseError(format!("Failed to parse user id: {}", e)))?;
+    let email: String = user.try_get("email")
+        .map_err(|e| AppError::DatabaseError(format!("Failed to parse email: {}", e)))?;
+    let username: String = user.try_get("username")
+        .map_err(|e| AppError::DatabaseError(format!("Failed to parse username: {}", e)))?;
+    let role: String = user.try_get("role")
+        .map_err(|e| AppError::DatabaseError(format!("Failed to parse role: {}", e)))?;
     let full_name: Option<String> = user.try_get("full_name").ok();
     let phone_number: Option<String> = user.try_get("phone_number").ok();
     let license_number: Option<String> = user.try_get("license_number").ok();
