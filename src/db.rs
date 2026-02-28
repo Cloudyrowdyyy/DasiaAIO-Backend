@@ -48,6 +48,7 @@ pub async fn run_migrations(pool: &PgPool) -> AppResult<()> {
             phone_number VARCHAR(20) NOT NULL,
             license_number VARCHAR(50),
             license_expiry_date TIMESTAMP WITH TIME ZONE,
+            profile_photo TEXT,
             verified BOOLEAN DEFAULT false,
             created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -57,6 +58,14 @@ pub async fn run_migrations(pool: &PgPool) -> AppResult<()> {
     .execute(pool)
     .await
     .map_err(|e| AppError::DatabaseError(format!("Failed to create users table: {}", e)))?;
+
+    // Backfill profile_photo column for databases created before this migration
+    sqlx::query(
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_photo TEXT"
+    )
+    .execute(pool)
+    .await
+    .map_err(|e| AppError::DatabaseError(format!("Failed to add profile_photo column: {}", e)))?;
 
     // Create verifications table
     sqlx::query(
