@@ -175,6 +175,7 @@ pub async fn run_migrations(pool: &PgPool) -> AppResult<()> {
             model VARCHAR(255) NOT NULL,
             manufacturer VARCHAR(255) NOT NULL,
             capacity_kg INTEGER NOT NULL,
+            passenger_capacity INTEGER DEFAULT 4,
             status VARCHAR(50) NOT NULL DEFAULT 'available',
             registration_expiry TIMESTAMP WITH TIME ZONE,
             insurance_expiry TIMESTAMP WITH TIME ZONE,
@@ -263,8 +264,9 @@ pub async fn run_migrations(pool: &PgPool) -> AppResult<()> {
             car_id VARCHAR(36) NOT NULL,
             driver_id VARCHAR(36) NOT NULL,
             allocation_id VARCHAR(36),
-            start_location VARCHAR(500) NOT NULL,
+            start_location VARCHAR(500),
             end_location VARCHAR(500),
+            destination VARCHAR(500),
             start_time TIMESTAMP WITH TIME ZONE NOT NULL,
             end_time TIMESTAMP WITH TIME ZONE,
             distance_km DECIMAL(10, 2),
@@ -322,6 +324,176 @@ pub async fn run_migrations(pool: &PgPool) -> AppResult<()> {
     .execute(pool)
     .await
     .map_err(|e| AppError::DatabaseError(format!("Failed to create support_tickets table: {}", e)))?;
+
+    // ── Schema migrations for existing databases ──────────────────────────────
+    // Add columns that may be missing from DBs created before these schema updates.
+    for migration in &[
+        "ALTER TABLE trips ADD COLUMN IF NOT EXISTS destination VARCHAR(500)",
+        "ALTER TABLE trips ALTER COLUMN start_location DROP NOT NULL",
+        "ALTER TABLE armored_cars ADD COLUMN IF NOT EXISTS passenger_capacity INTEGER DEFAULT 4",
+    ] {
+        sqlx::query(migration)
+            .execute(pool)
+            .await
+            .map_err(|e| AppError::DatabaseError(format!("Migration failed '{}': {}", migration, e)))?;
+    }
+
+    // Create notifications table
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS notifications (
+            id VARCHAR(36) PRIMARY KEY,
+            user_id VARCHAR(36) NOT NULL,
+            title VARCHAR(255) NOT NULL,
+            message TEXT NOT NULL,
+            type VARCHAR(50) NOT NULL DEFAULT 'info',
+            related_shift_id VARCHAR(36),
+            read BOOLEAN NOT NULL DEFAULT false,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+        "#,
+    )
+    .execute(pool)
+    .await
+    .map_err(|e| AppError::DatabaseError(format!("Failed to create notifications table: {}", e)))?;
+
+    // Create guard_availability table
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS guard_availability (
+            id VARCHAR(36) PRIMARY KEY,
+            guard_id VARCHAR(36) NOT NULL UNIQUE,
+            available BOOLEAN NOT NULL DEFAULT true,
+            available_from TIMESTAMP WITH TIME ZONE,
+            available_to TIMESTAMP WITH TIME ZONE,
+            notes TEXT,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (guard_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+        "#,
+    )
+    .execute(pool)
+    .await
+    .map_err(|e| AppError::DatabaseError(format!("Failed to create guard_availability table: {}", e)))?;
+
+    // Create guard_merit_scores table
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS guard_merit_scores (
+            id VARCHAR(36) PRIMARY KEY,
+            guard_id VARCHAR(36) NOT NULL UNIQUE,
+            attendance_score DOUBLE PRECISION NOT NULL DEFAULT 0,
+            punctuality_score DOUBLE PRECISION NOT NULL DEFAULT 0,
+            client_rating DOUBLE PRECISION NOT NULL DEFAULT 0,
+            overall_score DOUBLE PRECISION NOT NULL DEFAULT 0,
+            rank VARCHAR(50),
+            total_shifts_completed INTEGER DEFAULT 0,
+            on_time_count INTEGER DEFAULT 0,
+            late_count INTEGER DEFAULT 0,
+            no_show_count INTEGER DEFAULT 0,
+            average_client_rating DOUBLE PRECISION,
+            evaluation_count INTEGER DEFAULT 0,
+            last_calculated_at TIMESTAMP WITH TIME ZONE,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (guard_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+        "#,
+    )
+    .execute(pool)
+    .await
+    .map_err(|e| AppError::DatabaseError(format!("Failed to create guard_merit_scores table: {}", e)))?;
+
+    // Create client_evaluations table
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS client_evaluations (
+            id VARCHAR(36) PRIMARY KEY,
+            guard_id VARCHAR(36) NOT NULL,
+            shift_id VARCHAR(36),
+            mission_id VARCHAR(36),
+            evaluator_name VARCHAR(255) NOT NULL,
+            evaluator_role VARCHAR(100),
+            rating DOUBLE PRECISION NOT NULL,
+            comment TEXT,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (guard_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+        "#,
+    )
+    .execute(pool)
+    .await
+    .map_err(|e| AppError::DatabaseError(format!("Failed to create client_evaluations table: {}", e)))?;
+
+    // Create punctuality_records table
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS punctuality_records (
+            id VARCHAR(36) PRIMARY KEY,
+            guard_id VARCHAR(36) NOT NULL,
+            shift_id VARCHAR(36) NOT NULL,
+            scheduled_start_time TIMESTAMP WITH TIME ZONE NOT NULL,
+            actual_check_in_time TIMESTAMP WITH TIME ZONE,
+            minutes_late INTEGER,
+            is_on_time BOOLEAN NOT NULL DEFAULT true,
+            status VARCHAR(50) NOT NULL DEFAULT 'present',
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (guard_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+        "#,
+    )
+    .execute(pool)
+    .await
+    .map_err(|e| AppError::DatabaseError(format!("Failed to create punctuality_records table: {}", e)))?;
+
+    // Create training_records table
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS training_records (
+            id VARCHAR(36) PRIMARY KEY,
+            guard_id VARCHAR(36) NOT NULL,
+            training_type VARCHAR(100) NOT NULL,
+            completed_date TIMESTAMP WITH TIME ZONE NOT NULL,
+            expiry_date TIMESTAMP WITH TIME ZONE,
+            certificate_number VARCHAR(100),
+            status VARCHAR(50) NOT NULL DEFAULT 'valid',
+            notes TEXT,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (guard_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+        "#,
+    )
+    .execute(pool)
+    .await
+    .map_err(|e| AppError::DatabaseError(format!("Failed to create training_records table: {}", e)))?;
+
+    // Create firearm_maintenance table
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS firearm_maintenance (
+            id VARCHAR(36) PRIMARY KEY,
+            firearm_id VARCHAR(36) NOT NULL,
+            maintenance_type VARCHAR(100) NOT NULL,
+            description TEXT NOT NULL,
+            scheduled_date TIMESTAMP WITH TIME ZONE NOT NULL,
+            completion_date TIMESTAMP WITH TIME ZONE,
+            performed_by VARCHAR(255),
+            cost VARCHAR(50),
+            status VARCHAR(50) NOT NULL DEFAULT 'pending',
+            notes TEXT,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (firearm_id) REFERENCES firearms(id) ON DELETE CASCADE
+        )
+        "#,
+    )
+    .execute(pool)
+    .await
+    .map_err(|e| AppError::DatabaseError(format!("Failed to create firearm_maintenance table: {}", e)))?;
 
     Ok(())
 }
