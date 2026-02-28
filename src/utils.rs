@@ -97,7 +97,7 @@ pub async fn send_confirmation_email(
         .credentials(credentials)
         .build();
 
-    match mailer.send(&email).await {
+    match mailer.send(email).await {
         Ok(_) => {
             tracing::info!("Verification email sent successfully to {}", to_email);
             Ok(())
