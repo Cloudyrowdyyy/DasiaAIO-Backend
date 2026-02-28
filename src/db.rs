@@ -331,9 +331,6 @@ pub async fn run_migrations(pool: &PgPool) -> AppResult<()> {
         "ALTER TABLE trips ADD COLUMN IF NOT EXISTS destination VARCHAR(500)",
         "ALTER TABLE trips ALTER COLUMN start_location DROP NOT NULL",
         "ALTER TABLE armored_cars ADD COLUMN IF NOT EXISTS passenger_capacity INTEGER DEFAULT 4",
-        // Auto-verify any accounts that were created when SMTP wasn't configured
-        // (they were stuck unverified because no email was ever sent).
-        "UPDATE users SET verified = TRUE WHERE verified = FALSE",
     ] {
         sqlx::query(migration)
             .execute(pool)

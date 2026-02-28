@@ -126,20 +126,15 @@ pub async fn register(
                 tracing::info!("Verification email sent to {}", payload.email);
             }
             Err(e) => {
-                tracing::warn!("Failed to send verification email to {}: {}. User created but email not sent.", payload.email, e);
-                // Mark verified anyway so they can still log in
-                sqlx::query("UPDATE users SET verified = TRUE WHERE id = $1")
-                    .bind(&user_id)
-                    .execute(db.as_ref())
-                    .await
-                    .map_err(|e| AppError::DatabaseError(format!("Failed to auto-verify: {}", e)))?;
+                tracing::warn!("Failed to send verification email to {}: {}. User must resend the verification code.", payload.email, e);
+                // Do NOT auto-verify — user must verify their email
                 return Ok((
                     StatusCode::CREATED,
                     Json(json!({
-                        "message": "Registration successful! Email could not be sent — you can log in directly.",
+                        "message": "Registration successful! We couldn't send the verification email. Please use Resend Code to try again.",
                         "userId": user_id,
                         "email": payload.email,
-                        "requiresVerification": false
+                        "requiresVerification": true
                     })),
                 ));
             }
