@@ -74,10 +74,18 @@ pub async fn register(
     let confirmation_code = utils::generate_confirmation_code();
     let expires_at = chrono::Utc::now() + Duration::minutes(10);
 
+    // Determine if SMTP is configured before creating the user
+    let gmail_user = std::env::var("GMAIL_USER").unwrap_or_default();
+    let gmail_password = std::env::var("GMAIL_PASSWORD").unwrap_or_default();
+    let smtp_configured = !gmail_user.is_empty() && !gmail_password.is_empty();
+
+    // If SMTP is not configured, auto-verify immediately so users can log in
+    let initial_verified = !smtp_configured;
+
     // Create user
     sqlx::query(
         r#"INSERT INTO users (id, email, username, password, role, full_name, phone_number, license_number, license_expiry_date, verified)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, FALSE)"#
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"#
     )
     .bind(&user_id)
     .bind(&payload.email)
@@ -88,28 +96,26 @@ pub async fn register(
     .bind(&payload.phone_number)
     .bind(&payload.license_number)
     .bind(&payload.license_expiry_date)
+    .bind(initial_verified)
     .execute(db.as_ref())
     .await
     .map_err(|e| AppError::DatabaseError(format!("Failed to create user: {}", e)))?;
 
-    // Create verification record
-    let verification_id = utils::generate_id();
-    sqlx::query(
-        "INSERT INTO verifications (id, user_id, code, expires_at) VALUES ($1, $2, $3, $4)"
-    )
-    .bind(&verification_id)
-    .bind(&user_id)
-    .bind(&confirmation_code)
-    .bind(expires_at)
-    .execute(db.as_ref())
-    .await
-    .map_err(|e| AppError::DatabaseError(format!("Failed to create verification: {}", e)))?;
+    // Only create verification record + send email when SMTP is configured
+    if smtp_configured {
+        // Create verification record
+        let verification_id = utils::generate_id();
+        sqlx::query(
+            "INSERT INTO verifications (id, user_id, code, expires_at) VALUES ($1, $2, $3, $4)"
+        )
+        .bind(&verification_id)
+        .bind(&user_id)
+        .bind(&confirmation_code)
+        .bind(expires_at)
+        .execute(db.as_ref())
+        .await
+        .map_err(|e| AppError::DatabaseError(format!("Failed to create verification: {}", e)))?;
 
-    // Attempt to send verification email — failure is non-fatal so the user
-    // is always created even when SMTP isn't configured (dev / staging).
-    let gmail_user = std::env::var("GMAIL_USER").unwrap_or_default();
-    let gmail_password = std::env::var("GMAIL_PASSWORD").unwrap_or_default();
-    let email_sent = if !gmail_user.is_empty() && !gmail_password.is_empty() {
         match utils::send_confirmation_email(
             &gmail_user,
             &gmail_password,
@@ -118,35 +124,47 @@ pub async fn register(
         ).await {
             Ok(_) => {
                 tracing::info!("Verification email sent to {}", payload.email);
-                true
             }
             Err(e) => {
                 tracing::warn!("Failed to send verification email to {}: {}. User created but email not sent.", payload.email, e);
-                false
+                // Mark verified anyway so they can still log in
+                sqlx::query("UPDATE users SET verified = TRUE WHERE id = $1")
+                    .bind(&user_id)
+                    .execute(db.as_ref())
+                    .await
+                    .map_err(|e| AppError::DatabaseError(format!("Failed to auto-verify: {}", e)))?;
+                return Ok((
+                    StatusCode::CREATED,
+                    Json(json!({
+                        "message": "Registration successful! Email could not be sent — you can log in directly.",
+                        "userId": user_id,
+                        "email": payload.email,
+                        "requiresVerification": false
+                    })),
+                ));
             }
         }
-    } else {
-        tracing::warn!("GMAIL_USER / GMAIL_PASSWORD not set — skipping email, code logged to console.");
-        tracing::info!("Verification code for {} : {}", payload.email, confirmation_code);
-        false
-    };
 
-    // Include the confirmation code in the response when email was not sent
-    // (allows test/simulation scripts to verify without a real inbox).
-    let response_code: Option<&str> = if email_sent { None } else { Some(&confirmation_code) };
+        return Ok((
+            StatusCode::CREATED,
+            Json(json!({
+                "message": "Registration successful! Check your Gmail for confirmation code.",
+                "userId": user_id,
+                "email": payload.email,
+                "requiresVerification": true
+            })),
+        ));
+    }
 
+    // SMTP not configured — user is already verified, can log in immediately
+    tracing::info!("SMTP not configured — user {} auto-verified, can log in immediately.", payload.email);
     Ok((
         StatusCode::CREATED,
         Json(json!({
-            "message": if email_sent {
-                "Registration successful! Check your Gmail for confirmation code."
-            } else {
-                "Registration successful! Email not sent — use the confirmationCode field to verify."
-            },
+            "message": "Registration successful! You can now log in.",
             "userId": user_id,
             "email": payload.email,
-            "requiresVerification": true,
-            "confirmationCode": response_code
+            "requiresVerification": false
         })),
     ))
 }
