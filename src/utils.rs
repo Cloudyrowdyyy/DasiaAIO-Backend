@@ -48,7 +48,7 @@ pub async fn send_confirmation_email(
     use lettre::message::header::ContentType;
     use lettre::message::SinglePart;
     use lettre::transport::smtp::authentication::Credentials;
-    use lettre::{Message, SmtpTransport, Transport};
+    use lettre::{AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor};
 
     let html_body = format!(
         r#"
@@ -92,12 +92,12 @@ pub async fn send_confirmation_email(
 
     let credentials = Credentials::new(gmail_user.to_string(), gmail_password.to_string());
 
-    let mailer = SmtpTransport::relay("smtp.gmail.com")
+    let mailer = AsyncSmtpTransport::<Tokio1Executor>::relay("smtp.gmail.com")
         .map_err(|e| AppError::InternalServerError(format!("SMTP client error: {}", e)))?
         .credentials(credentials)
         .build();
 
-    match mailer.send(&email) {
+    match mailer.send(&email).await {
         Ok(_) => {
             tracing::info!("Verification email sent successfully to {}", to_email);
             Ok(())
