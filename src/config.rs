@@ -11,12 +11,18 @@ pub struct Config {
 
 impl Config {
     pub fn from_env() -> Result<Self, String> {
+        // Railway injects the assigned port as `PORT`.
+        // `SERVER_PORT` is our own alias (set in railway.json as `$PORT`).
+        // Check in order: PORT → SERVER_PORT → default 5000.
+        let port_str = env::var("PORT")
+            .or_else(|_| env::var("SERVER_PORT"))
+            .unwrap_or_else(|_| "5000".to_string());
+
         Ok(Config {
             server_host: env::var("SERVER_HOST").unwrap_or_else(|_| "0.0.0.0".to_string()),
-            server_port: env::var("SERVER_PORT")
-                .unwrap_or_else(|_| "5000".to_string())
+            server_port: port_str
                 .parse()
-                .map_err(|_| "SERVER_PORT must be a valid number".to_string())?,
+                .map_err(|_| format!("PORT '{}' must be a valid number", port_str))?,
             database_url: env::var("DATABASE_URL")
                 .map_err(|_| "DATABASE_URL must be set".to_string())?,
             gmail_user: env::var("GMAIL_USER").unwrap_or_else(|_| "no-reply@example.com".to_string()),
@@ -25,3 +31,4 @@ impl Config {
         })
     }
 }
+

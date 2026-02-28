@@ -8,7 +8,6 @@ mod config;
 
 use axum::{
     extract::DefaultBodyLimit,
-    http::{header, Method},
     routing::{get, post, put, delete},
     Router,
 };
@@ -36,8 +35,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let db = Arc::new(db_pool);
 
-    // CORS configuration
-    let cors_layer = CorsLayer::very_permissive();
+    // CORS configuration — allow all origins (no credentials, pure JWT via header)
+    // Set CORS_ORIGIN env var in Railway to restrict to a specific frontend domain.
+    let cors_layer = if let Ok(origin) = std::env::var("CORS_ORIGIN") {
+        tracing::info!("CORS restricted to origin: {}", origin);
+        origin
+            .parse::<axum::http::HeaderValue>()
+            .map(|hv| {
+                CorsLayer::new()
+                    .allow_origin(hv)
+                    .allow_methods(tower_http::cors::Any)
+                    .allow_headers(tower_http::cors::Any)
+                    .max_age(std::time::Duration::from_secs(3600))
+            })
+            .unwrap_or_else(|_| CorsLayer::very_permissive())
+    } else {
+        CorsLayer::very_permissive()
+    };
 
     // Build router
     let app = Router::new()

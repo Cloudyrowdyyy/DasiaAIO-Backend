@@ -2,13 +2,36 @@ use sqlx::postgres::{PgPool, PgPoolOptions};
 use crate::error::{AppError, AppResult};
 
 pub async fn init_db_pool(database_url: &str) -> AppResult<PgPool> {
-    let pool = PgPoolOptions::new()
-        .max_connections(5)
-        .connect(database_url)
-        .await
-        .map_err(|e| AppError::DatabaseError(format!("Failed to connect to database: {}", e)))?;
+    const MAX_RETRIES: u32 = 5;
+    const RETRY_DELAY_SECS: u64 = 3;
 
-    Ok(pool)
+    for attempt in 1..=MAX_RETRIES {
+        match PgPoolOptions::new()
+            .max_connections(10)
+            .acquire_timeout(std::time::Duration::from_secs(15))
+            .connect(database_url)
+            .await
+        {
+            Ok(pool) => {
+                tracing::info!("Database connected on attempt {}/{}", attempt, MAX_RETRIES);
+                return Ok(pool);
+            }
+            Err(e) if attempt < MAX_RETRIES => {
+                tracing::warn!(
+                    "DB connection attempt {}/{} failed: {}. Retrying in {}s...",
+                    attempt, MAX_RETRIES, e, RETRY_DELAY_SECS
+                );
+                tokio::time::sleep(std::time::Duration::from_secs(RETRY_DELAY_SECS)).await;
+            }
+            Err(e) => {
+                return Err(AppError::DatabaseError(format!(
+                    "Failed to connect to database after {} attempts: {}",
+                    MAX_RETRIES, e
+                )));
+            }
+        }
+    }
+    unreachable!()
 }
 
 pub async fn run_migrations(pool: &PgPool) -> AppResult<()> {

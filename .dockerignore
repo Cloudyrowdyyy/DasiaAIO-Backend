@@ -1,0 +1,26 @@
+# Rust build output — always rebuilt inside the container
+target/
+
+# Debug info / profiling files
+**/*.pdb
+
+# Git
+.git
+.gitignore
+
+# Local env files
+.env
+.env.*
+
+# IDE / editor
+.vscode
+*.code-workspace
+
+# Docs
+docs/
+README.md
+
+# Local scripts / test data
+*.ps1
+*.sql
+*.js
