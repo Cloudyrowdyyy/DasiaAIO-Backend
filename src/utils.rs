@@ -92,7 +92,7 @@ pub async fn send_confirmation_email(
 
     let credentials = Credentials::new(gmail_user.to_string(), gmail_password.to_string());
 
-    let mailer = AsyncSmtpTransport::<Tokio1Executor>::relay("smtp.gmail.com")
+    let mailer = AsyncSmtpTransport::<Tokio1Executor>::starttls_relay("smtp.gmail.com")
         .map_err(|e| AppError::InternalServerError(format!("SMTP client error: {}", e)))?
         .credentials(credentials)
         .build();
