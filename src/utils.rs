@@ -78,7 +78,7 @@ pub async fn send_confirmation_email(
         .post("https://api.resend.com/emails")
         .header("Authorization", format!("Bearer {}", api_key))
         .json(&serde_json::json!({
-            "from": "Sentinel DASIA <onboarding@resend.dev>",
+            "from": "Sentinel DASIA <noreply@dasiasentinel.xyz>",
             "to": [to_email],
             "subject": "Davao Security - Email Verification Code",
             "html": html_body
