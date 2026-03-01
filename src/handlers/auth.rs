@@ -74,12 +74,11 @@ pub async fn register(
     let confirmation_code = utils::generate_confirmation_code();
     let expires_at = chrono::Utc::now() + Duration::minutes(10);
 
-    // Determine if SMTP is configured before creating the user
-    let gmail_user = std::env::var("GMAIL_USER").unwrap_or_default();
-    let gmail_password = std::env::var("GMAIL_PASSWORD").unwrap_or_default();
-    let smtp_configured = !gmail_user.is_empty() && !gmail_password.is_empty();
+    // Determine if Resend API key is configured
+    let resend_api_key = std::env::var("RESEND_API_KEY").unwrap_or_default();
+    let smtp_configured = !resend_api_key.is_empty();
 
-    // If SMTP is not configured, auto-verify immediately so users can log in
+    // If email is not configured, auto-verify immediately so users can log in
     let initial_verified = !smtp_configured;
 
     // Create user
@@ -117,8 +116,7 @@ pub async fn register(
         .map_err(|e| AppError::DatabaseError(format!("Failed to create verification: {}", e)))?;
 
         match utils::send_confirmation_email(
-            &gmail_user,
-            &gmail_password,
+            &resend_api_key,
             &payload.email,
             &confirmation_code,
         ).await {
@@ -265,11 +263,9 @@ pub async fn resend_verification_code(
     .await
     .map_err(|e| AppError::DatabaseError(format!("Database error: {}", e)))?;
 
-    let gmail_user = std::env::var("GMAIL_USER").unwrap_or_else(|_| "no-reply@example.com".to_string());
-    let gmail_password = std::env::var("GMAIL_PASSWORD").unwrap_or_else(|_| "dummy-password".to_string());
+    let resend_api_key = std::env::var("RESEND_API_KEY").unwrap_or_default();
     utils::send_confirmation_email(
-        &gmail_user,
-        &gmail_password,
+        &resend_api_key,
         &payload.email,
         &confirmation_code,
     ).await?;

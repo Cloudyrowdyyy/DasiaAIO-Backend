@@ -40,16 +40,10 @@ pub fn validate_email(email: &str) -> AppResult<()> {
 }
 
 pub async fn send_confirmation_email(
-    gmail_user: &str,
-    gmail_password: &str,
+    api_key: &str,
     to_email: &str,
     code: &str,
 ) -> AppResult<()> {
-    use lettre::message::header::ContentType;
-    use lettre::message::SinglePart;
-    use lettre::transport::smtp::authentication::Credentials;
-    use lettre::{AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor};
-
     let html_body = format!(
         r#"
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -79,33 +73,28 @@ pub async fn send_confirmation_email(
         code
     );
 
-    let email = Message::builder()
-        .from(gmail_user.parse().map_err(|e| AppError::InternalServerError(format!("Invalid sender email: {}", e)))?)
-        .to(to_email.parse().map_err(|e| AppError::InternalServerError(format!("Invalid recipient email: {}", e)))?)
-        .subject("Davao Security - Email Verification Code")
-        .singlepart(
-            SinglePart::builder()
-                .header(ContentType::TEXT_HTML)
-                .body(html_body)
-        )
-        .map_err(|e| AppError::InternalServerError(format!("Email build error: {}", e)))?;
+    let client = reqwest::Client::new();
+    let response = client
+        .post("https://api.resend.com/emails")
+        .header("Authorization", format!("Bearer {}", api_key))
+        .json(&serde_json::json!({
+            "from": "Sentinel DASIA <onboarding@resend.dev>",
+            "to": [to_email],
+            "subject": "Davao Security - Email Verification Code",
+            "html": html_body
+        }))
+        .send()
+        .await
+        .map_err(|e| AppError::InternalServerError(format!("Failed to reach email API: {}", e)))?;
 
-    let credentials = Credentials::new(gmail_user.to_string(), gmail_password.to_string());
-
-    let mailer = AsyncSmtpTransport::<Tokio1Executor>::starttls_relay("smtp.gmail.com")
-        .map_err(|e| AppError::InternalServerError(format!("SMTP client error: {}", e)))?
-        .credentials(credentials)
-        .build();
-
-    match mailer.send(email).await {
-        Ok(_) => {
-            tracing::info!("Verification email sent successfully to {}", to_email);
-            Ok(())
-        }
-        Err(e) => {
-            tracing::error!("Failed to send verification email to {}: {}", to_email, e);
-            Err(AppError::InternalServerError(format!("Failed to send email: {}", e)))
-        }
+    if response.status().is_success() {
+        tracing::info!("Verification email sent successfully to {}", to_email);
+        Ok(())
+    } else {
+        let status = response.status();
+        let error_text = response.text().await.unwrap_or_default();
+        tracing::error!("Failed to send verification email to {}: {} {}", to_email, status, error_text);
+        Err(AppError::InternalServerError(format!("Email API error {}: {}", status, error_text)))
     }
 }
 
